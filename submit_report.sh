@@ -21,8 +21,8 @@ cat issue_list.txt | while read line
 do
     title=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
-    file=`echo $line | cut -d ',' -f 3`
-    list=($file)
+    log=`echo $line | cut -d ',' -f 3`
+    list=($log)
     url=()
 
     for item in "${list[@]}"
