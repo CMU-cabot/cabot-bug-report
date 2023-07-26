@@ -1,0 +1,8 @@
+[Unit]
+Description = Submit timer
+
+[Timer]
+OnUnitActiveSec=1m
+
+[Install]
+WantedBy=timers.target

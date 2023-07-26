@@ -1,0 +1,12 @@
+[Unit]
+Description = Submit Report System
+
+[Service]
+ExecStart = /opt/report-submitter/submit_report.sh
+Restart = no
+WorkingDirectory = /opt/report-submitter
+Type = simple
+
+[Install]
+WantedBy = default.target
+
