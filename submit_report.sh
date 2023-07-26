@@ -1,12 +1,5 @@
 #!/bin/bash
 
-ssid=`iwgetid -r`
-
-if [ $ssid != "M-lab" ]; then
-	notify-send "Upload System" "set wifi to M-lab"
-	exit
-fi
-
 pwd=`pwd`
 scriptdir=`dirname $0`
 cd $scriptdir
@@ -15,6 +8,14 @@ scriptdir=`pwd`
 cabotdir="/opt/cabot"
 logdir="$cabotdir/docker/home/.ros/log"
 
+ssid=`iwgetid -r`
+
+export $(cat $scriptdir/.env | grep -v "#" | xargs)
+
+if [ $ssid != $SSID ]; then
+	notify-send "Upload System" "set wifi to $SSID"
+	exit
+fi
 
 cat issue_list.txt | while read line
 do
