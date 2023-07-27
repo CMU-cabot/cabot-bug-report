@@ -48,6 +48,8 @@ do
         break
     fi
 
+    mkdir -p $scriptdir/content
+
     file_path=$scriptdir/content/$body_file_name
     python3 make_issue.py -t $title -f $file_path -u ${url[@]}
 
