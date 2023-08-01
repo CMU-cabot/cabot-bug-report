@@ -11,12 +11,13 @@ list=$scriptdir/issue_list.txt
 
 set -e
 
-title=$1
 log=$3
 
-date=`date +%Y%m%d%H%M`
+date=`date +%Y%m%d%H%M%S`
+title_file_name="title_$date.txt"
 body_file_name="report_$date.txt"
-issue_list="$title,$body_file_name,$log"
+issue_list="$title_file_name,$body_file_name,$log"
 
+echo -e "$1" > $scriptdir/content/$title_file_name
 echo -e "$2" > $scriptdir/content/$body_file_name
 echo $issue_list >> $list

@@ -19,7 +19,7 @@ fi
 
 cat issue_list.txt | while read line
 do
-    title=`echo $line | cut -d ',' -f 1`
+    title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
     log=`echo $line | cut -d ',' -f 3`
     list=($log)
@@ -44,17 +44,19 @@ do
         fi
     done
 
-    if [ ${#url[*]} -eq 0 ]; then
+    if [ ${#url[*]} -nq ${#list[*]} ]; then
         break
     fi
 
     mkdir -p $scriptdir/content
 
+    title_path=$scriptdir/content/$title_file_name
     file_path=$scriptdir/content/$body_file_name
-    python3 make_issue.py -t $title -f $file_path -u ${url[@]}
+    python3 make_issue.py -t $title_path -f $file_path -u ${url[@]}
 
     if [ $? -eq 0 ]; then
         rm $file_path
+        rm $title_path
         sed -i '1d' $scriptdir/issue_list.txt
     fi
 done

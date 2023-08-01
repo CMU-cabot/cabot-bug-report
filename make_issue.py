@@ -35,13 +35,17 @@ def make_github_issue(title, body=None, labels=None):
 
 
 parser = argparse.ArgumentParser(description='Make github issue with AI suitcase Log.')
-parser.add_argument('-t', '--title', action='store')
+parser.add_argument('-t', '--title_path', action='store')
 parser.add_argument('-f', '--file_path', action='store')
 parser.add_argument('-u', '--url', action='store', nargs='+')
 
 args = parser.parse_args()
 
+title = ""
 body = ""
+
+with open(args.title_path, "r") as f:
+    title = f.read()
 
 with open(args.file_path, "r") as f:
     text = f.read()
@@ -49,4 +53,4 @@ with open(args.file_path, "r") as f:
     for item in args.url:
         body += "\n" + item
 
-make_github_issue(args.title, body, ['バグ'])
+make_github_issue(title, body, ['バグ'])
