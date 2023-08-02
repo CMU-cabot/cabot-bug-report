@@ -2,7 +2,6 @@ import json
 import requests
 import argparse
 import os
-import sys
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -12,10 +11,10 @@ USERNAME = os.environ.get('USERNAME')
 PASSWORD = os.environ.get('PASSWORD')
 
 # The repository to add this issue to
-REPO_OWNER = os.environ.get('REPO_OWNER')
-REPO_NAME = os.environ.get('REPO_NAME')
+REPO_OWNER = os.environ.get('REPO_OWNER_FOR_ERROR')
+REPO_NAME = os.environ.get('REPO_NAME_FOR_ERROR')
 
-def make_github_issue(title, body=None, labels=None):
+def make_github_issue(title, body=None):
     '''Create an issue on github.com using the given parameters.'''
     # Our url to create issues via POST
     url = 'https://api.github.com/repos/%s/%s/issues' % (REPO_OWNER, REPO_NAME)
@@ -24,34 +23,33 @@ def make_github_issue(title, body=None, labels=None):
     session.auth = (USERNAME, PASSWORD)
     # Create our issue
     issue = {'title': title,
-             'body': body,
-             'labels': labels}
+             'body': body}
     # Add the issue to our repository
     r = session.post(url, json.dumps(issue))
     if r.status_code == 201:
         print ('Successfully created Issue "%s"' % title)
     else:
-        sys.stdout.write(str(r.content))
-        sys.exit(1)
+        print ('Could not create Issue "%s"' % title)
+        print ('Response:', r.content)
 
 
-parser = argparse.ArgumentParser(description='Make github issue with AI suitcase Log.')
-parser.add_argument('-t', '--title_path', action='store')
-parser.add_argument('-f', '--file_path', action='store')
-parser.add_argument('-u', '--url', action='store', nargs='+')
+parser = argparse.ArgumentParser(description='Make github issue with Error Log.')
+parser.add_argument('run', type=str, choices=['log', 'issue'])
+parser.add_argument('-e', '--error_message', action='store')
+parser.add_argument('-u', '--upload_file', action='store')
+parser.add_argument('-i', '--issue_contents', action='store')
 
 args = parser.parse_args()
 
-title = ""
-body = ""
+title = "Notice! There is an error in auto_upload"
+text = "An error occurred while "
 
-with open(args.title_path, "r") as f:
-    title = f.read()
+if args.run == "log":
+    text += "uploading " + args.upload_file
+elif args.run == "issue":
+    text += "making issue ({})".format(args.issue_contents)
 
-with open(args.file_path, "r") as f:
-    text = f.read()
-    body = text
-    for item in args.url:
-        body += "\n" + item
 
-make_github_issue(title, body, ['バグ'])
+body = text + "\n" + args.error_message
+
+make_github_issue(title, body)

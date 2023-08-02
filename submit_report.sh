@@ -37,26 +37,33 @@ do
         cd $scriptdir
         text=`python3 upload.py -f $FILE`
         if [ $? -eq 1 ]; then
-            notify-send $FILE "$text"
+            python3 notice_error.py log -e "$text" -f "$FILE"
+            url+=($FILE)
             continue
         else
             url+=($text)
         fi
     done
 
-    if [ ${#url[*]} -nq ${#list[*]} ]; then
-        break
-    fi
-
     mkdir -p $scriptdir/content
+    mkdir -p $scriptdir/error
 
     title_path=$scriptdir/content/$title_file_name
     file_path=$scriptdir/content/$body_file_name
-    python3 make_issue.py -t $title_path -f $file_path -u ${url[@]}
+    response=`python3 make_issue.py -t $title_path -f $file_path -u ${url[@]}`
 
-    if [ $? -eq 0 ]; then
-        rm $file_path
-        rm $title_path
-        sed -i '1d' $scriptdir/issue_list.txt
+    if [ $? -ne 0 ]; then
+        head=`head -n1 $scriptdir/issue_list.txt`
+        python3 notice_error.py issue -e "$response" -i "$head"
+        echo $head >> $scriptdir/error/issue_list.txt
+        cat $title_path > $scriptdir/error/$title_file_name
+        cat $file_path > $scriptdir/error/$body_file_name
     fi
+
+    echo $responce
+    
+    rm $file_path
+    rm $title_path
+    sed -i '1d' $scriptdir/issue_list.txt
+
 done
