@@ -71,5 +71,5 @@ except Exception as e:
         sys.exit(0)
     else:
         sys.stdout.write(e.message)
-        sys.exit()
+        sys.exit(1)
 

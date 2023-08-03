@@ -37,7 +37,7 @@ do
         cd $scriptdir
         text=`python3 upload.py -f $FILE`
         if [ $? -eq 1 ]; then
-            python3 notice_error.py log -e "$text" -f "$FILE"
+            python3 notice_error.py log -e "$text" -u "$FILE"
             url+=($FILE)
             continue
         else
