@@ -55,3 +55,9 @@ command = ["./create_list.sh", title, body, logs]
 subprocess.call(command)
 ```
 
+### Recommend
+- if you want to stop this timer while the Cabot system is running, change it as follows.
+  - add the following to cabot.service
+  `ExecStop = systemctl --user start submit_report.timer`
+  - add the following to submit_report.timer
+  `Conflicts=cabot.service`
