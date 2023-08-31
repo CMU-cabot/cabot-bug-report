@@ -1,7 +1,12 @@
 #!/bin/bash
 
-cd /opt/cabot/docker/home/.ros/log
+cd /opt/cabot/docker/home/.ros/log/
 
-logs=($(ls | grep ^cabot | grep -v .zip | tail -5))
+num=10
+if [[ ! -z $1 ]]; then
+    num=$1
+fi
+
+logs=($(ls -d cabot*/ | tail -$num | sed "s'/''" ))
 
 echo ${logs[@]}
