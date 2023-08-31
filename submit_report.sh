@@ -17,7 +17,7 @@ if [ $ssid != $SSID ]; then
 	exit
 fi
 
-cat issue_list.txt | while read line
+cat issue_list.txt | grep -v "UPLOADED" | while read line
 do
     title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
@@ -62,8 +62,5 @@ do
 
     echo $responce
     
-    rm $file_path
-    rm $title_path
-    sed -i '1d' $scriptdir/issue_list.txt
-
+    sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
 done
