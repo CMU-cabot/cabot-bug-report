@@ -20,5 +20,7 @@ body_file_name=`echo $line | cut -d ',' -f 2`
 title_path=$scriptdir/content/$title_file_name
 file_path=$scriptdir/content/$body_file_name
 
+echo "1"
+echo $(echo $line | grep UPLOADED | wc -l)
 cat $title_path
 cat $file_path
