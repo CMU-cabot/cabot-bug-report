@@ -15,6 +15,8 @@ PASSWORD = os.environ.get('PASSWORD')
 REPO_OWNER = os.environ.get('REPO_OWNER')
 REPO_NAME = os.environ.get('REPO_NAME')
 
+CABOT_NAME = os.environ.get('CABOT_NAME')
+
 def make_github_issue(title, body=None, labels=None):
     '''Create an issue on github.com using the given parameters.'''
     # Our url to create issues via POST
@@ -44,13 +46,15 @@ args = parser.parse_args()
 
 title = ""
 body = ""
+if CABOT_NAME:
+    body += "CABOT_NAME is " + CABOT_NAME + "\n"
 
 with open(args.title_path, "r") as f:
     title = f.read()
 
 with open(args.file_path, "r") as f:
     text = f.read()
-    body = text
+    body += text
     for item in args.url:
         body += "\n" + item
 
