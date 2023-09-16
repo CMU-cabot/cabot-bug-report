@@ -58,4 +58,4 @@ with open(args.file_path, "r") as f:
     for item in args.url:
         body += "\n" + item
 
-make_github_issue(title, body, ['バグ'])
+make_github_issue(title, body, ['報告'])

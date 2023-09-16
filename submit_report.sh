@@ -72,7 +72,7 @@ do
                 zip -r $FILE $item
             fi
             upload $FILE
-        fiS
+        fi
     done
 
     mkdir -p $scriptdir/content
