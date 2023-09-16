@@ -11,6 +11,7 @@ Example
 """.format(sys.argv[0]))
 
 parser.add_option('-f', '--file', type=str, help='bag file to upload')
+parser.add_option('-s', '--split', type=str, help='bag file to upload')
 
 (options, args) = parser.parse_args()
 
@@ -19,6 +20,12 @@ if not options.file:
     sys.exit(0)
 
 file_name = options.file
+
+split = False
+zip_name = ""
+if options.split:
+    split = True
+    zip_name = options.split
 
 
 auth = CCGAuth(
@@ -53,7 +60,11 @@ def get_url(file_id):
     shared_link = client.file(file_id).get_shared_link()
     return shared_link
 
-for num in [year, month, day]:
+x = [year, month, day]
+if split:
+    x.append(zip_name)
+
+for num in x:
     if  subfolder_id := check_folder(folder_id, num):
         folder_id = subfolder_id
         continue
