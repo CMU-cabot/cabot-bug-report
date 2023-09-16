@@ -60,9 +60,9 @@ do
 
         FILE="$item.zip"
         SIZE=`du -d 0 $item | cut -f 1`
-        if [ $SIZE -gt 1300000 ]; then
+        if [ $SIZE -gt 13000000 ]; then
             if [ ! -e $FILE ]; then
-                zip -r -s 1G $item.zip $item
+                zip -r -s 10G $item.zip $item
             fi
             zips=(`ls | grep $item.`)
             echo ${zips[@]}
