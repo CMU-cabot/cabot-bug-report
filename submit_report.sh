@@ -17,6 +17,35 @@ if [ $ssid != $SSID ]; then
 	exit
 fi
 
+upload() {
+    FILE=$1
+    cd $scriptdir
+        text=`python3 upload.py -f $FILE`
+        if [ $? -eq 1 ]; then
+            python3 notice_error.py log -e "$text" -u "$FILE"
+            url+=($FILE)
+            continue
+        else
+            url+=($text)
+        fi
+}
+
+upload_split() {
+    zips=$1
+    name=$2
+    cd $scriptdir
+    for item in "${zips[@]}"
+    do
+        text=`python3 upload.py -f $item -s $name`
+        if [ $? -eq 1 ]; then
+            python3 notice_error.py log -e "$text" -u "$item"
+            url+=($item)
+        else
+            url+=($text)
+        fi
+    done
+}
+
 cat issue_list.txt | grep -v "UPLOADED" | while read line
 do
     title_file_name=`echo $line | cut -d ',' -f 1`
@@ -30,18 +59,19 @@ do
         cd $logdir
 
         FILE="$item.zip"
-        if [ ! -e $FILE ]; then
-            zip -r $FILE $item
-        fi
-
-        cd $scriptdir
-        text=`python3 upload.py -f $FILE`
-        if [ $? -eq 1 ]; then
-            python3 notice_error.py log -e "$text" -u "$FILE"
-            url+=($FILE)
-            continue
+        SIZE=`du -d 0 $item | cut -f 1`
+        if [ $SIZE -gt 13000000 ]; then
+            if [ ! -e $FILE ]; then
+                zip -r -s 10G $item.zip $item
+            fi
+            zips=(`ls | grep $item.`)
+            echo ${zips[@]}
+            upload_split $zips $item
         else
-            url+=($text)
+            if [ ! -e $FILE ]; then
+                zip -r $FILE $item
+            fi
+            upload $FILE
         fi
     done
 
