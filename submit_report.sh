@@ -12,7 +12,7 @@ ssid=`iwgetid -r`
 
 export $(cat $scriptdir/.env | grep -v "#" | xargs)
 
-if [ $ssid != $SSID ]; then
+if [ -z "$ssid" ] || [ $ssid != $SSID ]; then
 	notify-send "Upload System" "set wifi to $SSID"
 	exit
 fi
