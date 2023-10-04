@@ -11,6 +11,7 @@ cd $scriptdir
 scriptdir=`pwd`
 
 ## install report-submitter
+sudo rm -rf /opt/report-submitter
 sudo ln -sf $scriptdir /opt/report-submitter
 
 ## install submit_report.service and submit_report.timer
