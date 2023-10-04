@@ -25,7 +25,6 @@ upload() {
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$FILE"
             url+="None"
-            continue
         else
             url+=($text)
         fi
@@ -34,7 +33,13 @@ upload() {
 upload_split() {
     zips=$1
     name=$2
+
     cd $scriptdir
+
+    folder_url=`python3 get_folder_url.py -f $name`
+    log_name+=($name)
+    url+=($folder_url)
+
     for item in "${zips[@]}"
     do
         text=`python3 upload.py -f $item -s $name`
