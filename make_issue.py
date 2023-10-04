@@ -48,6 +48,7 @@ args = parser.parse_args()
 title = ""
 body = ""
 dic = dict(zip(args.log_name, args.url))
+
 if CABOT_NAME:
     body += "CABOT_NAME is " + CABOT_NAME + "\n"
 
@@ -57,9 +58,9 @@ with open(args.title_path, "r") as f:
 with open(args.file_path, "r") as f:
     text = f.read()
     body += text
-    for k,v in dic:
+    for k,v in dic.items():
         if v == "None":
-            body += "\n" + item
+            body += "\n" + k
         else:
             body += "\n" + "[{}]({})".format(k, v)
         

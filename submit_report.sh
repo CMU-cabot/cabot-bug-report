@@ -45,7 +45,7 @@ upload_split() {
             url+=($text)
         fi
         
-        log_name+=+=($item)
+        log_name+=($item)
     done
 }
 
