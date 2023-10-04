@@ -19,12 +19,12 @@ fi
 
 upload() {
     FILE=$1
+    log_name+=($FILE)
     cd $scriptdir
         text=`python3 upload.py -f $FILE`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$FILE"
-            url+=($FILE)
-            continue
+            url+="None"
         else
             url+=($text)
         fi
@@ -33,16 +33,24 @@ upload() {
 upload_split() {
     zips=$1
     name=$2
+
     cd $scriptdir
+
+    folder_url=`python3 get_folder_url.py -f $name`
+    log_name+=($name)
+    url+=($folder_url)
+
     for item in "${zips[@]}"
     do
         text=`python3 upload.py -f $item -s $name`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$item"
-            url+=($item)
+            url+="None"
         else
             url+=($text)
         fi
+        
+        log_name+=($item)
     done
 }
 
@@ -53,6 +61,7 @@ do
     log=`echo $line | cut -d ',' -f 3`
     list=($log)
     url=()
+    log_name=()
 
     for item in "${list[@]}"
     do
@@ -80,7 +89,7 @@ do
 
     title_path=$scriptdir/content/$title_file_name
     file_path=$scriptdir/content/$body_file_name
-    response=`python3 make_issue.py -t $title_path -f $file_path -u ${url[@]}`
+    response=`python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]}`
 
     if [ $? -ne 0 ]; then
         head=`head -n1 $scriptdir/issue_list.txt`

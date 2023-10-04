@@ -41,11 +41,14 @@ parser = argparse.ArgumentParser(description='Make github issue with AI suitcase
 parser.add_argument('-t', '--title_path', action='store')
 parser.add_argument('-f', '--file_path', action='store')
 parser.add_argument('-u', '--url', action='store', nargs='+')
+parser.add_argument('-l', '--log_name', action='store', nargs='+')
 
 args = parser.parse_args()
 
 title = ""
 body = ""
+dic = dict(zip(args.log_name, args.url))
+
 if CABOT_NAME:
     body += "CABOT_NAME is " + CABOT_NAME + "\n"
 
@@ -55,7 +58,11 @@ with open(args.title_path, "r") as f:
 with open(args.file_path, "r") as f:
     text = f.read()
     body += text
-    for item in args.url:
-        body += "\n" + item
+    for k,v in dic.items():
+        if v == "None":
+            body += "\n" + k
+        else:
+            body += "\n" + "[{}]({})".format(k, v)
+        
 
 make_github_issue(title, body, ['報告'])
