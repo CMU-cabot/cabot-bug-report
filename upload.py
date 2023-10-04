@@ -28,8 +28,8 @@ def get_file_url(file_id):
     return shared_link
 
 def get_folder_url(folder_id):
-    url = client.folder(folder_id).get_url()
-    return url
+    shared_link = client.folder(folder_id).get_shared_link()
+    return shared_link
 
 def get_folder_id(elements):
     folder_id = os.environ.get('FOLDER_ID')
