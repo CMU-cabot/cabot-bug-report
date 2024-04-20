@@ -22,4 +22,4 @@ x = [year, month, day, folder_name]
 folder_id = upload.get_folder_id(x)
 
 url = upload.get_folder_url(folder_id)
-sys.stdout.write(url)
+print(f"{folder_id},{url}")

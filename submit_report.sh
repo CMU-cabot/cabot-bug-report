@@ -36,13 +36,16 @@ upload_split() {
 
     cd $scriptdir
 
-    folder_url=`python3 get_folder_url.py -f $name`
+    output=$(python3 get_folder_url.py -f $name)
+    IFS=',' read -r folder_id folder_url <<< "$output"
     log_name+=($name)
     url+=($folder_url)
 
     for item in "${zips[@]}"
     do
-        text=`python3 upload.py -f $item -s $name`
+        echo start uploading $item
+        echo folder_id = $folder_id
+        text=`python3 upload.py -f $item -s $folder_id`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$item"
             url+="None"

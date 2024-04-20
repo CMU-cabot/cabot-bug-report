@@ -60,14 +60,6 @@ if __name__ == "__main__":
         sys.exit(0)
 
     file_name = options.file
-
-    split = False
-    zip_name = ""
-    if options.split:
-        split = True
-        zip_name = options.split
-
-
     file_path = '/opt/cabot/docker/home/.ros/log/'
 
 
@@ -77,10 +69,11 @@ if __name__ == "__main__":
     file_path = file_path + file_name
 
     x = [year, month, day]
-    if split:
-        x.append(zip_name)
-
-    folder_id = get_folder_id(x)
+    folder_id = ""
+    if options.split:
+        folder_id = options.split
+    else:
+        folder_id = get_folder_id(x)
 
     try:
         chunked_uploader = client.folder(folder_id).get_chunked_uploader(file_path=file_path, file_name=file_name)
