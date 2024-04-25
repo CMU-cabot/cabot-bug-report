@@ -69,19 +69,19 @@ do
     for item in "${list[@]}"
     do
         cd $logdir
-
-        FILE="$item.zip"
         SIZE=`du -d 0 $item | cut -f 1`
         if [ $SIZE -gt 13000000 ]; then
-            if [ ! -e $FILE ]; then
-                zip -r -s 10G $item.zip $item
+            FILE=(${item}_part_*)
+            if [ ! -e "${FILE[0]}" ]; then
+                tar -cvf - $item | split -b 10G - ${item}_part_
             fi
-            zips=(`ls | grep $item.`)
+            zips=(`ls | grep ${item}_part_`)
             echo ${zips[@]}
             upload_split $zips $item
         else
+            FILE="$item.tar"
             if [ ! -e $FILE ]; then
-                zip -r $FILE $item
+                tar -cvf $FILE $item
             fi
             upload $FILE
         fi
