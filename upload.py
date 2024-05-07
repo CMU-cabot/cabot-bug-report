@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 from optparse import OptionParser
 from boxsdk import Client, CCGAuth
 from dotenv import load_dotenv
@@ -80,10 +81,15 @@ if __name__ == "__main__":
         uploaded_file = chunked_uploader.start()
         sys.stdout.write(get_file_url(uploaded_file.id))
     except Exception as e:
-        if e.status == 409:
+        # エラーメッセージとスタックトレースを出力
+        sys.stdout.write(f"Exception occurred: {str(e)}\n")
+        traceback.print_exc()
+        
+        # status属性を持つかどうか確認し、持っていれば処理
+        if hasattr(e, 'status') and e.status == 409:
             sys.stdout.write(get_file_url(e.context_info["conflicts"]["id"]))
             sys.exit(0)
         else:
-            sys.stdout.write(e.message)
+            # status属性がない場合や、他のエラーの場合の処理
+            sys.stdout.write(str(e))
             sys.exit(1)
-
