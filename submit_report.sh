@@ -21,14 +21,17 @@ upload() {
     FILE=$1
     log_name+=($FILE)
     cd $scriptdir
-        text=`python3 upload.py -f $FILE`
-        if [ $? -eq 1 ]; then
-            python3 notice_error.py log -e "$text" -u "$FILE"
-            url+=("None")
-            all_upload=0
-        else
-            url+=($text)
-        fi
+    echo start uploading $FILE
+    text=`python3 upload.py -f $FILE | tail -n 1`
+    if [ $? -eq 1 ]; then
+        python3 notice_error.py log -e "$text" -u "$FILE"
+        url+=("None")
+        all_upload=0
+    else
+        url+=($text)
+        echo uploaded
+        echo $text
+    fi
 }
 
 upload_split() {
@@ -46,7 +49,7 @@ upload_split() {
     do
         echo start uploading $item
         echo folder_id = $folder_id
-        text=`python3 upload.py -f $item -s $folder_id`
+        text=`python3 upload.py -f $item -s $folder_id | tail -n 1`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$item"
             url+=("None")
@@ -90,7 +93,7 @@ do
                 upload $FILE
             fi
         done
-        if [[ $all_upload eq 1 ]]; then
+        if [[ $all_upload -eq 1 ]]; then
             sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
         fi
     fi
