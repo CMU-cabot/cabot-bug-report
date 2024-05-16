@@ -90,7 +90,7 @@ do
                 upload $FILE
             fi
         done
-        if [[ $all_upload eq 1 ]]; then
+        if [[ $all_upload -eq 1 ]]; then
             sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
         fi
     fi
@@ -116,5 +116,7 @@ do
         echo $response
     fi
     
-    sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
+    if [[ "$line" != *UPLOADED* ]]; then
+        sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
+    fi
 done
