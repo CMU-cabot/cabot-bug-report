@@ -23,5 +23,5 @@ do
     if [ -f ./$log/ros2_topics/metadata.yaml ]; then
         nanoseconds=$(cat ./$log/ros2_topics/metadata.yaml | grep -m 1 nanoseconds: | awk '{print $2}')
     fi
-    echo "$log,$nanoseconds,$is_report_submitted,$is_uploaded_to_box"
+    echo "$log,$is_report_submitted,$is_uploaded_to_box,$nanoseconds"
 done
