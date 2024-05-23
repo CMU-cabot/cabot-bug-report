@@ -19,5 +19,9 @@ for log in ${logs[@]}
 do
     is_report_submitted=$(grep $log $list | wc -l)
     is_uploaded_to_box=$(grep $log $list | grep UPLOADED | wc -l)
-    echo "$log,$is_report_submitted,$is_uploaded_to_box"
+    nanoseconds="None"
+    if [ -f ./$log/ros2_topics/metadata.yaml ]; then
+        nanoseconds=$(cat ./$log/ros2_topics/metadata.yaml | grep -m 1 nanoseconds: | awk '{print $2}')
+    fi
+    echo "$log,$is_report_submitted,$is_uploaded_to_box,$nanoseconds"
 done

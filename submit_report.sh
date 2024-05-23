@@ -21,7 +21,7 @@ upload() {
     FILE=$1
     log_name+=($FILE)
     cd $scriptdir
-        text=`python3 upload.py -f $FILE`
+        text=`python3 upload.py -f $FILE | tail -n 1`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$FILE"
             url+=("None")
@@ -46,7 +46,7 @@ upload_split() {
     do
         echo start uploading $item
         echo folder_id = $folder_id
-        text=`python3 upload.py -f $item -s $folder_id`
+        text=`python3 upload.py -f $item -s $folder_id | tail -n 1`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$item"
             url+=("None")
@@ -61,15 +61,15 @@ upload_split() {
 
 cat issue_list.txt | while read line
 do
-    title_file_name=`echo $line | cut -d ',' -f 1`
-    body_file_name=`echo $line | cut -d ',' -f 2`
-    log=`echo $line | cut -d ',' -f 3`
-    list=($log)
-    url=()
-    log_name=()
-    all_upload=1
+    if [[ "$line" != *ALL_UPLOAD* && "$line" != *REPORTED* ]]; then
+        title_file_name=`echo $line | cut -d ',' -f 1`
+        body_file_name=`echo $line | cut -d ',' -f 2`
+        log=`echo $line | cut -d ',' -f 3`
+        list=($log)
+        url=()
+        log_name=()
+        all_upload=1
 
-    if [[ "$line" != *ALL_UPLOAD* ]]; then
         for item in "${list[@]}"
         do
             cd $logdir
@@ -93,30 +93,30 @@ do
         if [[ $all_upload -eq 1 ]]; then
             sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
         fi
-    fi
 
-    if [[ "$line" != *REPORTED* ]]; then
-        mkdir -p $scriptdir/content
-        mkdir -p $scriptdir/error
+        if [[ "$line" != *REPORTED* ]]; then
+            mkdir -p $scriptdir/content
+            mkdir -p $scriptdir/error
 
-        title_path=$scriptdir/content/$title_file_name
-        file_path=$scriptdir/content/$body_file_name
-        response=`python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]}`
+            title_path=$scriptdir/content/$title_file_name
+            file_path=$scriptdir/content/$body_file_name
+            response=`python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]}`
 
-        if [ $? -ne 0 ]; then
-            head=`head -n1 $scriptdir/issue_list.txt`
-            python3 notice_error.py issue -e "$response" -i "$head"
-            echo $head >> $scriptdir/error/issue_list.txt
-            cat $title_path > $scriptdir/error/$title_file_name
-            cat $file_path > $scriptdir/error/$body_file_name
-        else
-            sed -i "s/\(.*$log\)/\1,REPORTED/" $scriptdir/issue_list.txt
+            if [ $? -ne 0 ]; then
+                head=`head -n1 $scriptdir/issue_list.txt`
+                python3 notice_error.py issue -e "$response" -i "$head"
+                echo $head >> $scriptdir/error/issue_list.txt
+                cat $title_path > $scriptdir/error/$title_file_name
+                cat $file_path > $scriptdir/error/$body_file_name
+            else
+                sed -i "s/\(.*$log\)/\1,REPORTED/" $scriptdir/issue_list.txt
+            fi
+
+            echo $response
         fi
-
-        echo $response
-    fi
-    
-    if [[ "$line" != *UPLOADED* ]]; then
-        sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
+        
+        if [[ "$line" != *UPLOADED* ]]; then
+            sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
+        fi
     fi
 done
