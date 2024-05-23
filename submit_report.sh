@@ -21,7 +21,7 @@ upload() {
     FILE=$1
     log_name+=($FILE)
     cd $scriptdir
-        text=`python3 upload.py -f $FILE`
+        text=`python3 upload.py -f $FILE | tail -n 1`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$FILE"
             url+=("None")
@@ -46,7 +46,7 @@ upload_split() {
     do
         echo start uploading $item
         echo folder_id = $folder_id
-        text=`python3 upload.py -f $item -s $folder_id`
+        text=`python3 upload.py -f $item -s $folder_id | tail -n 1`
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$text" -u "$item"
             url+=("None")
