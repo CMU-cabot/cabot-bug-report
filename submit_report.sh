@@ -37,7 +37,7 @@ upload_split() {
 
     cd $scriptdir
 
-    output=$(python3 get_folder_url.py -f $name)
+    output=$(python3 get_folder_url.py -f $name 2>/dev/null)
     IFS=',' read -r folder_id folder_url <<< "$output"
     log_name+=($name)
     url+=($folder_url)
@@ -61,7 +61,7 @@ upload_split() {
 
 cat issue_list.txt | while read line
 do
-    if [[ "$line" != *ALL_UPLOAD* && "$line" != *REPORTED* ]]; then
+    if [[ "$line" != *ALL_UPLOAD* || "$line" != *REPORTED* ]]; then
         title_file_name=`echo $line | cut -d ',' -f 1`
         body_file_name=`echo $line | cut -d ',' -f 2`
         log=`echo $line | cut -d ',' -f 3`
