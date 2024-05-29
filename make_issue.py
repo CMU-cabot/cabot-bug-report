@@ -32,8 +32,28 @@ def make_github_issue(title, body=None, labels=None):
     r = session.post(url, json.dumps(issue))
     if r.status_code == 201:
         print ('Successfully created Issue "%s"' % title)
+        print (r.json()['number'])
     else:
-        sys.stdout.write(str(r.content))
+        sys.stderr.write(str(r.status_code))
+        sys.stderr.write(str(r.json()))
+        sys.exit(1)
+
+def update_issue_body(num, body=None):
+    url = 'https://api.github.com/repos/%s/%s/issues/%s' % (REPO_OWNER, REPO_NAME, num)
+
+    session = requests.session()
+    session.auth = (USERNAME, PASSWORD)
+
+    data = {
+        "body": body
+    }
+
+    r = session.patch(url, json.dumps(data))
+    if r.status_code == 200:
+        print ('Update Issue "%s" body' % num)
+    else:
+        sys.stderr.write(str(r.status_code))
+        sys.stderr.write(str(r.json()))
         sys.exit(1)
 
 
@@ -42,12 +62,14 @@ parser.add_argument('-t', '--title_path', action='store')
 parser.add_argument('-f', '--file_path', action='store')
 parser.add_argument('-u', '--url', action='store', nargs='+')
 parser.add_argument('-l', '--log_name', action='store', nargs='+')
+parser.add_argument('-i', '--issue_number', action='store')
 
 args = parser.parse_args()
 
 title = ""
 body = ""
 dic = dict(zip(args.log_name, args.url))
+num = args.issue_number
 
 if CABOT_NAME:
     body += "CABOT_NAME is " + CABOT_NAME + "\n"
@@ -64,5 +86,7 @@ with open(args.file_path, "r") as f:
         else:
             body += "\n" + "[{}]({})".format(k, v)
         
-
-make_github_issue(title, body, ['報告'])
+if num:
+    update_issue_body(num, body)
+else:
+    make_github_issue(title, body, ['報告'])
