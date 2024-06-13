@@ -56,13 +56,27 @@ def update_issue_body(num, body=None):
         sys.stderr.write(str(r.json()))
         sys.exit(1)
 
+def check_close(num):
+    url = 'https://api.github.com/repos/%s/%s/issues/%s' % (REPO_OWNER, REPO_NAME, num)
+
+    session = requests.session()
+    session.auth = (USERNAME, PASSWORD)
+
+    r = session.get(url)
+    if r.status_code == 200:
+        print (r.json().get("state"))
+        sys.exit(0)
+    else:
+        sys.stderr.write(str(r.json()))
+        sys.exit(1)
 
 parser = argparse.ArgumentParser(description='Make github issue with AI suitcase Log.')
 parser.add_argument('-t', '--title_path', action='store')
 parser.add_argument('-f', '--file_path', action='store')
-parser.add_argument('-u', '--url', action='store', nargs='+')
-parser.add_argument('-l', '--log_name', action='store', nargs='+')
+parser.add_argument('-u', '--url', action='store', nargs='*', default=[])
+parser.add_argument('-l', '--log_name', action='store', nargs='*', default=[])
 parser.add_argument('-i', '--issue_number', action='store')
+parser.add_argument('-c', '--close_check', action='store_true')
 
 args = parser.parse_args()
 
@@ -70,6 +84,9 @@ title = ""
 body = ""
 dic = dict(zip(args.log_name, args.url))
 num = args.issue_number
+
+if args.close_check:
+    check_close(num)
 
 if CABOT_NAME:
     body += "CABOT_NAME is " + CABOT_NAME + "\n"
