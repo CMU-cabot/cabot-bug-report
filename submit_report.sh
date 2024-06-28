@@ -12,10 +12,10 @@ ssid=`iwgetid -r`
 
 export $(cat $scriptdir/.env | grep -v "#" | xargs)
 
-if [ -z "$ssid" ] || [ $ssid != $SSID ]; then
-	notify-send "Upload System" "set wifi to $SSID"
-	exit
-fi
+# if [ -z "$ssid" ] || [ $ssid != $SSID ]; then
+# 	notify-send "Upload System" "set wifi to $SSID"
+# 	exit
+# fi
 
 upload() {
     FILE=$1
@@ -62,37 +62,48 @@ upload_split() {
 
 cat issue_list.txt | while read line
 do
-    if [[ "$line" != *ALL_UPLOAD* || "$line" != *REPORTED* ]]; then
-        title_file_name=`echo $line | cut -d ',' -f 1`
-        body_file_name=`echo $line | cut -d ',' -f 2`
-        log=`echo $line | cut -d ',' -f 3`
+    title_file_name=`echo $line | cut -d ',' -f 1`
+    body_file_name=`echo $line | cut -d ',' -f 2`
+    log=`echo $line | cut -d ',' -f 3`
+    if [[ -n $log && ("$line" != *ALL_UPLOAD* || "$line" != *REPORTED*) ]]; then
         list=($log)
         url=()
         log_name=()
         all_upload=1
 
-        for item in "${list[@]}"
-        do
-            cd $logdir
-            SIZE=`du -d 0 $item | cut -f 1`
-            if [ $SIZE -gt 13000000 ]; then
-                FILE=(${item}_part_*)
-                if [ ! -e "${FILE[0]}" ]; then
-                    tar -cvf - $item | split -b 10G - ${item}_part_
-                fi
-                zips=(`ls | grep ${item}_part_`)
-                echo ${zips[@]}
-                upload_split $zips $item
-            else
-                FILE="$item.tar"
-                if [ ! -e $FILE ]; then
-                    tar -cvf $FILE $item
-                fi
-                upload $FILE
+        if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
+            num=${BASH_REMATCH[1]}
+            result=`python3 make_issue.py -c -i $num`
+
+            if [ "$result" = "closed" ]; then
+                continue
             fi
-        done
-        if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
-            sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
+        fi
+
+        if [ -n "$ssid" ] && [ $ssid == $SSID ]; then
+            for item in "${list[@]}"
+            do
+                cd $logdir
+                SIZE=`du -d 0 $item | cut -f 1`
+                if [ $SIZE -gt 13000000 ]; then
+                    FILE=(${item}_part_*)
+                    if [ ! -e "${FILE[0]}" ]; then
+                        tar -cvf - $item | split -b 10G - ${item}_part_
+                    fi
+                    zips=(`ls | grep ${item}_part_`)
+                    echo ${zips[@]}
+                    upload_split $zips $item
+                else
+                    FILE="$item.tar"
+                    if [ ! -e $FILE ]; then
+                        tar -cvf $FILE $item
+                    fi
+                    upload $FILE
+                fi
+            done
+            if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
+                sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
+            fi
         fi
 
         mkdir -p $scriptdir/content
@@ -100,35 +111,38 @@ do
 
         title_path=$scriptdir/content/$title_file_name
         file_path=$scriptdir/content/$body_file_name
-        if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
-            num=${BASH_REMATCH[1]}
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num > stdout.log 2> stderr.log
+        if [ `awk 'NF' $title_path` ]; then
+            if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
+                num=${BASH_REMATCH[1]}
+                python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num > stdout.log 2> stderr.log
 
-            if [ $? -ne 0 ]; then
-                response=$(cat stderr.log)
-                python3 notice_error.py issue -e "$response" -i "update log link #$num"
+                if [ $? -ne 0 ]; then
+                    response=$(cat stderr.log)
+                    python3 notice_error.py issue -e "$response" -i "update log link #$num"
+                else
+                    response=$(cat stdout.log)
+                fi
             else
-                response=$(cat stdout.log)
-            fi
-        else
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} > stdout.log 2> stderr.log
+                python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} > stdout.log 2> stderr.log
 
-            if [ $? -ne 0 ]; then
-                response=$(cat stderr.log)
-                python3 notice_error.py issue -e "$response" -i "$line"
-            else
-                response=$(cat stdout.log)
-                issue_num=$(cat stdout.log | tail -n 1)
-                sed -i "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt
+                if [ $? -ne 0 ]; then
+                    response=$(cat stderr.log)
+                    python3 notice_error.py issue -e "$response" -i "$line"
+                else
+                    response=$(cat stdout.log)
+                    issue_num=$(cat stdout.log | tail -n 1)
+                    sed -i "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt
+                fi
             fi
         fi
 
         echo $response
         
-        if [[ "$line" != *UPLOADED* ]]; then
-            sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
-        fi
+        # if [[ "$line" != *UPLOADED* ]]; then
+        #     sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
+        # fi
     fi
 done
 
-rm stdout.log stderr.log
+[ -f stdout.log ] && rm stdout.log
+[ -f stderr.log ] && rm stderr.log

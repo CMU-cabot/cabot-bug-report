@@ -37,3 +37,4 @@ else
     echo -e "$2" > $scriptdir/content/$body_file_name
     echo $issue_list >> $list
 fi
+
