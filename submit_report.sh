@@ -69,7 +69,15 @@ do
         list=($log)
         url=()
         log_name=()
-        all_upload=1
+        all_upload=0
+
+        mkdir -p $scriptdir/content
+        mkdir -p $scriptdir/error
+
+        title_path=$scriptdir/content/$title_file_name
+        file_path=$scriptdir/content/$body_file_name
+        notification=0
+        source $scriptdir/.env
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             num=${BASH_REMATCH[1]}
@@ -80,7 +88,13 @@ do
             fi
         fi
 
+        if [ ! `awk 'NF' $title_path` ]; then
+            continue
+        fi
+
         if [ -n "$ssid" ] && [ $ssid == $SSID ]; then
+            all_upload=1
+            bash $scriptdir/notification.sh $CABOT_NAME"のログのアップロードを開始します。"
             for item in "${list[@]}"
             do
                 cd $logdir
@@ -104,43 +118,46 @@ do
             if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
                 sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
             fi
+            ((notification+=$all_upload))
         fi
 
-        mkdir -p $scriptdir/content
-        mkdir -p $scriptdir/error
+        make_issue=1
 
-        title_path=$scriptdir/content/$title_file_name
-        file_path=$scriptdir/content/$body_file_name
-        if [ `awk 'NF' $title_path` ]; then
-            if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
-                num=${BASH_REMATCH[1]}
-                python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num > stdout.log 2> stderr.log
+        if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
+            num=${BASH_REMATCH[1]}
+            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num > stdout.log 2> stderr.log
 
-                if [ $? -ne 0 ]; then
-                    response=$(cat stderr.log)
-                    python3 notice_error.py issue -e "$response" -i "update log link #$num"
-                else
-                    response=$(cat stdout.log)
-                fi
+            if [ $? -ne 0 ]; then
+                response=$(cat stderr.log)
+                python3 notice_error.py issue -e "$response" -i "update log link #$num"
+                make_issue=0
             else
-                python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} > stdout.log 2> stderr.log
+                response=$(cat stdout.log)
+            fi
+        else
+            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} > stdout.log 2> stderr.log
 
-                if [ $? -ne 0 ]; then
-                    response=$(cat stderr.log)
-                    python3 notice_error.py issue -e "$response" -i "$line"
-                else
-                    response=$(cat stdout.log)
-                    issue_num=$(cat stdout.log | tail -n 1)
-                    sed -i "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt
-                fi
+            if [ $? -ne 0 ]; then
+                response=$(cat stderr.log)
+                python3 notice_error.py issue -e "$response" -i "$line"
+                make_issue=0
+            else
+                response=$(cat stdout.log)
+                issue_num=$(cat stdout.log | tail -n 1)
+                sed -i "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt
             fi
         fi
 
         echo $response
+        ((notification+=$make_issue))
         
         # if [[ "$line" != *UPLOADED* ]]; then
         #     sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
         # fi
+
+        if [ $notification -eq 2 ]; then
+            bash $scriptdir/notification.sh $CABOT_NAME"のログのアップロードが終了しました。"
+        fi
     fi
 done
 
