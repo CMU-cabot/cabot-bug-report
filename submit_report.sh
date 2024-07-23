@@ -12,28 +12,8 @@ ssid=`iwgetid -r`
 
 export $(cat $scriptdir/.env | grep -v "#" | xargs)
 
-# if [ -z "$ssid" ] || [ $ssid != $SSID ]; then
-# 	notify-send "Upload System" "set wifi to $SSID"
-# 	exit
-# fi
-
 upload() {
-    FILE=$1
-    log_name+=($FILE)
-    cd $scriptdir
-        echo start uploading $FILE
-        python3 upload.py -f $FILE > stdout.log 2> stderr.log
-        if [ $? -eq 1 ]; then
-            python3 notice_error.py log -e "$(cat stderr.log)" -u "$FILE"
-            url+=("None")
-            all_upload=0
-        else
-            url+=($(cat stdout.log | tail -n 1))
-        fi
-}
-
-upload_split() {
-    zips=$1
+    tars=$1
     name=$2
 
     cd $scriptdir
@@ -43,7 +23,7 @@ upload_split() {
     log_name+=($name)
     url+=($folder_url)
 
-    for item in "${zips[@]}"
+    for item in "${tars[@]}"
     do
         echo start uploading $item
         echo folder_id = $folder_id
@@ -99,21 +79,25 @@ do
             do
                 cd $logdir
                 SIZE=`du -d 0 $item | cut -f 1`
+
+                FILE1="${item}_log.tar"
+                tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
+                tars=($FILE1)
                 if [ $SIZE -gt 13000000 ]; then
-                    FILE=(${item}_part_*)
-                    if [ ! -e "${FILE[0]}" ]; then
-                        tar -cvf - $item | split -b 10G - ${item}_part_
+                    PARTS=(${item}_ros2_topics_part_*)
+                    if [ ! -e "${PARTS[0]}" ]; then
+                        tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
                     fi
-                    zips=(`ls | grep ${item}_part_`)
-                    echo ${zips[@]}
-                    upload_split $zips $item
+                    tars+=(`ls | grep ${item}_ros2_topics_part_`)
                 else
-                    FILE="$item.tar"
-                    if [ ! -e $FILE ]; then
-                        tar -cvf $FILE $item
+                    FILE2="${item}_ros2_topics.tar"
+                    if [ ! -e $FILE2 ]; then
+                        tar -cvf $FILE2 $item/ros2_topics
                     fi
-                    upload $FILE
+                    tars+=($FILE2)
                 fi
+                echo ${tars[@]}
+                upload $tars $item
             done
             if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
                 sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
