@@ -46,7 +46,7 @@ upload() {
 }
 
 failed=0
-cat issue_list.txt | while read line
+while read line
 do
     title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
@@ -158,7 +158,7 @@ do
             failed=1
         fi
     fi
-done
+done < issue_list.txt
 
 if [ $failed -eq 1 ]; then
     bash $scriptdir/notification.sh $CABOT_NAME"の再アップロードをしてください。"
