@@ -89,8 +89,20 @@ def get_folder_id(elements):
 
 @error_handler
 def chunked_upload(folder_id, file_path, file_name):
-    chunked_uploader = client.folder(folder_id).get_chunked_uploader(file_path=file_path, file_name=file_name)
-    uploaded_file = chunked_uploader.start()
+    try:
+        chunked_uploader = client.folder(folder_id).get_chunked_uploader(file_path=file_path, file_name=file_name)
+        uploaded_file = chunked_uploader.start()
+    except Exception as e:
+        if hasattr(e, 'code') and e.code == "file_size_too_small":
+            uploaded_file = upload(folder_id, file_path, file_name)
+        else:
+            raise
+
+    return uploaded_file
+
+@error_handler
+def upload(folder_id, file_path, file_name):
+    uploaded_file = client.folder(folder_id).upload(file_path=file_path, file_name=file_name)
 
     return uploaded_file
 
