@@ -38,14 +38,15 @@ def make_github_issue(title, body=None, labels=None):
         sys.stderr.write(str(r.json()))
         sys.exit(1)
 
-def update_issue_body(num, body=None):
+def update_issue_body(num, body=None, labels=None):
     url = 'https://api.github.com/repos/%s/%s/issues/%s' % (REPO_OWNER, REPO_NAME, num)
 
     session = requests.session()
     session.auth = (USERNAME, PASSWORD)
 
     data = {
-        "body": body
+        "body": body,
+        "labels": labels
     }
 
     r = session.patch(url, json.dumps(data))
@@ -77,6 +78,7 @@ parser.add_argument('-u', '--url', action='store', nargs='*', default=[])
 parser.add_argument('-l', '--log_name', action='store', nargs='*', default=[])
 parser.add_argument('-i', '--issue_number', action='store')
 parser.add_argument('-c', '--close_check', action='store_true')
+parser.add_argument('-L', '--labels', action='store', nargs='*', default=[])
 
 args = parser.parse_args()
 
@@ -84,6 +86,8 @@ title = ""
 body = ""
 dic = dict(zip(args.log_name, args.url))
 num = args.issue_number
+issue_labels = ['報告']
+issue_labels.extend(args.labels)
 
 if args.close_check:
     check_close(num)
@@ -104,6 +108,6 @@ with open(args.file_path, "r") as f:
             body += "\n" + "[{}]({})".format(k, v)
         
 if num:
-    update_issue_body(num, body)
+    update_issue_body(num, body, issue_labels)
 else:
-    make_github_issue(title, body, ['報告'])
+    make_github_issue(title, body, issue_labels)
