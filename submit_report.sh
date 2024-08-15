@@ -9,8 +9,13 @@ cabotdir="/opt/cabot"
 logdir="$cabotdir/docker/home/.ros/log"
 
 ssid=`iwgetid -r`
+can_upload=0
 
 export $(cat $scriptdir/.env | grep -v "#" | xargs)
+
+if [ -n "$ssid" ] && [ $ssid == $SSID ]; then
+    can_upload=1
+fi
 
 upload() {
     tars=$1
@@ -40,6 +45,7 @@ upload() {
     done
 }
 
+failed=0
 cat issue_list.txt | while read line
 do
     title_file_name=`echo $line | cut -d ',' -f 1`
@@ -72,9 +78,9 @@ do
             continue
         fi
 
-        if [ -n "$ssid" ] && [ $ssid == $SSID ]; then
+        if [ $can_upload -eq 1 ]; then
             all_upload=1
-            bash $scriptdir/notification.sh $CABOT_NAME"のログのアップロードを開始します。"
+            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードを開始します。"
             for item in "${list[@]}"
             do
                 cd $logdir
@@ -105,11 +111,17 @@ do
             ((notification+=$all_upload))
         fi
 
+        label=()
+        if [[ $all_upload -eq 0 ]]; then
+            label+=($CABOT_NAME)
+            label+=("未アップロード")
+        fi
+
         make_issue=1
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             num=${BASH_REMATCH[1]}
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num > stdout.log 2> stderr.log
+            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num -L ${label[@]} > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)
@@ -119,7 +131,7 @@ do
                 response=$(cat stdout.log)
             fi
         else
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} > stdout.log 2> stderr.log
+            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -L ${label[@]} > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)
@@ -140,10 +152,17 @@ do
         # fi
 
         if [ $notification -eq 2 ]; then
-            bash $scriptdir/notification.sh $CABOT_NAME"のログのアップロードが終了しました。"
+            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。"
+        elif [ $can_upload -eq 1 ]; then
+            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードに失敗しました。"
+            failed=1
         fi
     fi
 done
+
+if [ $failed -eq 1 ]; then
+    bash $scriptdir/notification.sh $CABOT_NAME"の再アップロードをしてください。"
+fi
 
 [ -f stdout.log ] && rm stdout.log
 [ -f stderr.log ] && rm stderr.log
