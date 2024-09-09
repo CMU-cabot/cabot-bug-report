@@ -152,7 +152,7 @@ do
         # fi
 
         if [ $notification -eq 2 ]; then
-            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。"
+            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${num}"
         elif [ $can_upload -eq 1 ]; then
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードに失敗しました。"
             failed=1
