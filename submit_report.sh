@@ -13,19 +13,44 @@ can_upload=0
 
 export $(cat $scriptdir/.env | grep -v "#" | xargs)
 
-if [ -n "$ssid" ] && [ $ssid == $SSID ]; then
+if [ -z "$ssid" ]; then
+    exit
+elif [ $ssid == $SSID ]; then
     can_upload=1
+else
+    bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
+    systemctl --user stop submit_report.timer
 fi
 
 upload() {
-    tars=$1
-    name=$2
+    item=$1
+
+    cd $logdir
+    SIZE=`du -d 0 $item | cut -f 1`
+
+    FILE1="${item}_log.tar"
+    tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
+    tars=($FILE1)
+    if [ $SIZE -gt 13000000 ]; then
+        PARTS=(${item}_ros2_topics_part_*)
+        if [ ! -e "${PARTS[0]}" ]; then
+            tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
+        fi
+        tars+=(`ls | grep ${item}_ros2_topics_part_`)
+    else
+        FILE2="${item}_ros2_topics.tar"
+        if [ ! -e $FILE2 ]; then
+            tar -cvf $FILE2 $item/ros2_topics
+        fi
+        tars+=($FILE2)
+    fi
+    echo ${tars[@]}
 
     cd $scriptdir
 
-    output=$(python3 get_folder_url.py -f $name 2>/dev/null)
+    output=$(python3 get_folder_url.py -f $item 2>/dev/null)
     IFS=',' read -r folder_id folder_url <<< "$output"
-    log_name+=($name)
+    log_name+=($item)
     url+=($folder_url)
 
     for item in "${tars[@]}"
@@ -44,6 +69,16 @@ upload() {
         log_name+=($item)
     done
 }
+
+while getopts "u:" opt; do
+    case $opt in
+      u)
+        upload $OPTARG
+        exit
+        ;;
+    esac
+done
+shift $((OPTIND-1))
 
 failed=0
 while read line
@@ -83,37 +118,14 @@ do
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードを開始します。"
             for item in "${list[@]}"
             do
-                cd $logdir
-                SIZE=`du -d 0 $item | cut -f 1`
-
-                FILE1="${item}_log.tar"
-                tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
-                tars=($FILE1)
-                if [ $SIZE -gt 13000000 ]; then
-                    PARTS=(${item}_ros2_topics_part_*)
-                    if [ ! -e "${PARTS[0]}" ]; then
-                        tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
-                    fi
-                    tars+=(`ls | grep ${item}_ros2_topics_part_`)
-                else
-                    FILE2="${item}_ros2_topics.tar"
-                    if [ ! -e $FILE2 ]; then
-                        tar -cvf $FILE2 $item/ros2_topics
-                    fi
-                    tars+=($FILE2)
-                fi
-                echo ${tars[@]}
-                upload $tars $item
+                upload $item
             done
-            if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
-                sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
-            fi
             ((notification+=$all_upload))
         fi
 
         label=()
+        label+=($CABOT_NAME)
         if [[ $all_upload -eq 0 ]]; then
-            label+=($CABOT_NAME)
             label+=("未アップロード")
         fi
 
@@ -146,12 +158,11 @@ do
 
         echo $response
         ((notification+=$make_issue))
-        
-        # if [[ "$line" != *UPLOADED* ]]; then
-        #     sed -i "s/\(.*$log\)/\1,UPLOADED/" $scriptdir/issue_list.txt
-        # fi
 
         if [ $notification -eq 2 ]; then
+            if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
+                sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
+            fi
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${num}"
         elif [ $can_upload -eq 1 ]; then
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードに失敗しました。"
@@ -161,7 +172,10 @@ do
 done < issue_list.txt
 
 if [ $failed -eq 1 ]; then
-    bash $scriptdir/notification.sh $CABOT_NAME"の再アップロードをしてください。"
+    bash $scriptdir/notification.sh $CABOT_NAME"の再アップロードをします。"
+elif [ $can_upload -eq 1 ]; then
+    bash $scriptdir/notification.sh $CABOT_NAME"の自動アップロードを終了します。"
+    systemctl --user stop submit_report.timer
 fi
 
 [ -f stdout.log ] && rm stdout.log
