@@ -3,6 +3,7 @@ import requests
 import argparse
 import os
 import sys
+import time
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -57,19 +58,31 @@ def update_issue_body(num, body=None, labels=None):
         sys.stderr.write(str(r.json()))
         sys.exit(1)
 
-def check_close(num):
-    url = 'https://api.github.com/repos/%s/%s/issues/%s' % (REPO_OWNER, REPO_NAME, num)
+def check_close(num, retry=0, max_retries=5, delay=2):
+    url = f'https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/issues/{num}'
 
     session = requests.session()
     session.auth = (USERNAME, PASSWORD)
 
-    r = session.get(url)
-    if r.status_code == 200:
-        print (r.json().get("state"))
-        sys.exit(0)
-    else:
-        sys.stderr.write(str(r.json()))
-        sys.exit(1)
+    try:
+        r = session.get(url)
+        if r.status_code == 200:
+            print(r.json().get("state"))
+            sys.exit(0)
+        else:
+            if retry < max_retries:
+                time.sleep(delay)
+                check_close(num, retry=retry+1, max_retries=max_retries, delay=delay)
+            else:
+                sys.stderr.write(f"Error: {r.status_code} {r.json()}\n")
+                sys.exit(1)
+    except requests.exceptions.RequestException as e:
+        if retry < max_retries:
+            time.sleep(delay)
+            check_close(num, retry=retry+1, max_retries=max_retries, delay=delay)
+        else:
+            sys.stderr.write(f"Exception: {str(e)}\n")
+            sys.exit(1)
 
 parser = argparse.ArgumentParser(description='Make github issue with AI suitcase Log.')
 parser.add_argument('-t', '--title_path', action='store')

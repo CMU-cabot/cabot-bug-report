@@ -23,7 +23,15 @@ def error_handler(func):
             
             # status属性を持つかどうか確認し、持っていれば処理
             if hasattr(e, 'status') and e.status == 409:
-                sys.stdout.write(get_file_url(e.context_info["conflicts"]["id"]))
+                file_id = e.context_info["conflicts"]["id"]
+                file_url = get_file_url(file_id)
+                if func.__name__ == "chunked_upload":
+                    file_info = client.file(file_id).get()
+                    file_path=args[1]
+                    file_name=args[2]
+                    if file_info["size"] != os.path.getsize(file_path):
+                        update_contents(file_id, file_path, file_name)
+                sys.stdout.write(file_url)
                 sys.exit(0)
             else:
                 # status属性がない場合や、他のエラーの場合の処理
@@ -105,6 +113,10 @@ def upload(folder_id, file_path, file_name):
     uploaded_file = client.folder(folder_id).upload(file_path=file_path, file_name=file_name)
 
     return uploaded_file
+
+@error_handler
+def update_contents(file_id, file_path, file_name):
+    client.file(file_id).update_contents(file_path=file_path, file_name=file_name)
 
 if __name__ == "__main__":
 
