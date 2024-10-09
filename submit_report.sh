@@ -70,6 +70,31 @@ upload() {
     done
 }
 
+cp_log() {
+    log=$1
+    read date time < <(echo $log | sed -E 's/cabot_([0-9]{4}-[0-9]{2}-[0-9]{2})-([0-9]{2}-[0-9]{2}-[0-9]{2})/\1 \2/')
+
+    timestamp=$(date -d "${time//-/:}" "+%s")
+
+    cd /opt/cabot-ble-server/log
+
+    list=($(ls | grep $date))
+
+    for item in ${list[@]}
+    do
+        i_time=$(echo $item | sed -E 's/cabot-ble-server_[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2})\.log/\1/')
+        i_timestamp=$(date -d "${i_time//-/:}" "+%s")
+        if (( timestamp < i_timestamp )); then
+            break
+        fi
+        select=$item
+    done
+
+    if [ -n "$select" ]; then
+        cp $select $logdir/$log
+    fi
+}
+
 while getopts "u:" opt; do
     case $opt in
       u)
@@ -115,9 +140,10 @@ do
 
         if [ $can_upload -eq 1 ]; then
             all_upload=1
-            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードを開始します。"
             for item in "${list[@]}"
             do
+                bash $scriptdir/notification.sh $CABOT_NAME"の${item}のアップロードを開始します。"
+                cp_log $item
                 upload $item
             done
             ((notification+=$all_upload))
