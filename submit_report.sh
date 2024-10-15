@@ -80,14 +80,14 @@ cp_log() {
 
     list=($(ls | grep $date))
 
-    for item in ${list[@]}
+    for server_log in ${list[@]}
     do
-        i_time=$(echo $item | sed -E 's/cabot-ble-server_[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2})\.log/\1/')
+        i_time=$(echo $server_log | sed -E 's/cabot-ble-server_[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2})\.log/\1/')
         i_timestamp=$(date -d "${i_time//-/:}" "+%s")
         if (( timestamp < i_timestamp )); then
             break
         fi
-        select=$item
+        select=$server_log
     done
 
     if [ -n "$select" ]; then
