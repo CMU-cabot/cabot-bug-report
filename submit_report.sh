@@ -23,7 +23,7 @@ else
 fi
 
 upload() {
-    item=$1
+    local item=$1
 
     cd $logdir
     SIZE=`du -d 0 $item | cut -f 1`
@@ -53,34 +53,35 @@ upload() {
     log_name+=($item)
     url+=($folder_url)
 
-    for item in "${tars[@]}"
+    for upload_item in "${tars[@]}"
     do
-        echo start uploading $item
+        echo start uploading $upload_item
+        bash $scriptdir/notification.sh "start uploading ${upload_item}"
         echo folder_id = $folder_id
-        python3 upload.py -f $item -s $folder_id  > stdout.log 2> stderr.log
+        python3 upload.py -f $upload_item -s $folder_id  > stdout.log 2> stderr.log
         if [ $? -eq 1 ]; then
-            python3 notice_error.py log -e "$(cat stderr.log)" -u "$item"
+            python3 notice_error.py log -e "$(cat stderr.log)" -u "$upload_item"
             url+=("None")
             all_upload=0
         else
             url+=($(cat stdout.log | tail -n 1))
         fi
         
-        log_name+=($item)
+        log_name+=($upload_item)
     done
 }
 
 cp_log() {
-    log=$1
+    local log=$1
     read date time < <(echo $log | sed -E 's/cabot_([0-9]{4}-[0-9]{2}-[0-9]{2})-([0-9]{2}-[0-9]{2}-[0-9]{2})/\1 \2/')
 
     timestamp=$(date -d "${time//-/:}" "+%s")
 
     cd /opt/cabot-ble-server/log
 
-    list=($(ls | grep $date))
+    server_log_list=($(ls | grep $date))
 
-    for server_log in ${list[@]}
+    for server_log in ${server_log_list[@]}
     do
         i_time=$(echo $server_log | sed -E 's/cabot-ble-server_[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2})\.log/\1/')
         i_timestamp=$(date -d "${i_time//-/:}" "+%s")
