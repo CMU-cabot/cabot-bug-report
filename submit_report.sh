@@ -11,7 +11,7 @@ logdir="$cabotdir/docker/home/.ros/log"
 ssid=`iwgetid -r`
 can_upload=0
 
-export $(cat $scriptdir/.env | grep -v "#" | xargs)
+source $scriptdir/.env
 
 if [ -z "$ssid" ]; then
     exit
@@ -21,6 +21,7 @@ elif [ $ssid == $SSID ]; then
         nmcli con down $value
     done
 
+    unset IFS
     can_upload=1
 else
     bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
