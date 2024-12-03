@@ -16,6 +16,11 @@ export $(cat $scriptdir/.env | grep -v "#" | xargs)
 if [ -z "$ssid" ]; then
     exit
 elif [ $ssid == $SSID ]; then
+    IFS=','
+    for value in $OFFNW; do
+        nmcli con down $value
+    done
+
     can_upload=1
 else
     bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
@@ -203,6 +208,10 @@ if [ $failed -eq 1 ]; then
 elif [ $can_upload -eq 1 ]; then
     bash $scriptdir/notification.sh $CABOT_NAME"の自動アップロードを終了します。"
     systemctl --user stop submit_report.timer
+    IFS=','
+    for value in $OFFNW; do
+        nmcli con up $value
+    done
 fi
 
 [ -f stdout.log ] && rm stdout.log
