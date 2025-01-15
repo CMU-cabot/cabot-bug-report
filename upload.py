@@ -10,6 +10,7 @@ from boxsdk.network.network_interface import NetworkResponse
 from boxsdk.session.session import AuthorizedSession
 from dotenv import load_dotenv
 load_dotenv()
+import re
 
 def error_handler(func):
     @wraps(func)
@@ -79,8 +80,11 @@ def get_file_url(file_id):
 
 @error_handler
 def get_folder_url(folder_id):
-    shared_link = client.folder(folder_id).get_shared_link()
-    return shared_link
+    app_endpoint = client.folder(folder_id).get_shared_link()
+    m = re.match(r'(.*\.com)\/.*', app_endpoint)
+    web_endpoint = m.group(1) + "/folder/" + folder_id
+
+    return web_endpoint
 
 @error_handler
 def get_folder_id(elements):
