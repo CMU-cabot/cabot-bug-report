@@ -13,6 +13,7 @@ scriptdir=`pwd`
 ## install report-submitter
 sudo rm -rf /opt/report-submitter
 sudo ln -sf $scriptdir /opt/report-submitter
+docker compose build --build-arg UID=$(id -u)
 
 ## install submit_report.service and submit_report.timer
 INSTALL_DIR=$HOME/.config/systemd/user

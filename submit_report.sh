@@ -11,7 +11,8 @@ logdir="$cabotdir/docker/home/.ros/log"
 ssid=`iwgetid -r`
 can_upload=0
 
-export $(cat $scriptdir/.env | grep -v "#" | xargs)
+# export $(cat $scriptdir/.env | grep -v "#" | xargs)
+source $scriptdir/.env
 
 if [ -z "$ssid" ]; then
     exit
@@ -159,12 +160,12 @@ do
         make_issue=1
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
-            num=${BASH_REMATCH[1]}
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $num -L ${label[@]} > stdout.log 2> stderr.log
+            issue_num=${BASH_REMATCH[1]}
+            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $issue_num -L ${label[@]} > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)
-                python3 notice_error.py issue -e "$response" -i "update log link #$num"
+                python3 notice_error.py issue -e "$response" -i "update log link #$issue_num"
                 make_issue=0
             else
                 response=$(cat stdout.log)
@@ -190,7 +191,7 @@ do
             if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
                 sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
             fi
-            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${num}"
+            bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${issue_num}"
         elif [ $can_upload -eq 1 ]; then
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードに失敗しました。"
             failed=1
