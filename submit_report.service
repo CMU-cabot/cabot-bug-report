@@ -2,7 +2,7 @@
 Description = Submit Report System
 
 [Service]
-ExecStart = /opt/report-submitter/submit_report.sh
+ExecStart = /opt/report-submitter/launch.sh
 Restart = no
 WorkingDirectory = /opt/report-submitter
 Type = simple
