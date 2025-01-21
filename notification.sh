@@ -4,7 +4,7 @@ scriptdir=`dirname $0`
 cd $scriptdir
 scriptdir=`pwd`
 
-# source $scriptdir/.env
+source $scriptdir/.env
 
 text=$1
 

@@ -113,8 +113,10 @@ done
 shift $((OPTIND-1))
 
 failed=0
+cp $scriptdir/issue_list.txt while.txt
 while read line
 do
+    echo $line
     title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
     log=`echo $line | cut -d ',' -f 3`
@@ -185,7 +187,9 @@ do
             else
                 response=$(cat stdout.log)
                 issue_num=$(cat stdout.log | tail -n 1)
-                sed -i "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt
+                sed "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt > tmp_file \
+                  && cp tmp_file $scriptdir/issue_list.txt \
+                  && rm tmp_file
             fi
         fi
 
@@ -194,7 +198,9 @@ do
 
         if [ $notification -eq 2 ]; then
             if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
-                sed -i "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt
+                sed "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt > tmp_file \
+                  && cp tmp_file $scriptdir/issue_list.txt \
+                  && rm tmp_file
             fi
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${issue_num}"
         elif [ $can_upload -eq 1 ]; then
@@ -202,7 +208,9 @@ do
             failed=1
         fi
     fi
-done < issue_list.txt
+done < while.txt
+
+rm while.txt
 
 if [ $failed -eq 1 ]; then
     bash $scriptdir/notification.sh $CABOT_NAME"の再アップロードをします。"
