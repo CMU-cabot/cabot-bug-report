@@ -12,19 +12,35 @@ ssid=`iwgetid -r`
 can_upload=0
 METRIC=50
 
-export $(cat $scriptdir/.env | grep -v "#" | xargs)
+COUNT_FILE="$scriptdir/timer_count"
+if [ ! -f "$COUNT_FILE" ]; then
+    echo 0 > $COUNT_FILE
+fi
+
+timer_count=$(cat "$COUNT_FILE")
+((timer_count+=1))
+
+source $scriptdir/.env
 
 if [ -z "$ssid" ]; then
+    bash $scriptdir/notification.sh "timer起動"$timer_count"回目"
+    echo $timer_count > $COUNT_FILE
+    if [ "$timer_count" -gt 3 ]; then
+        systemctl --user stop submit_report.timer
+        rm $COUNT_FILE
+    fi
     exit
 elif [ $ssid == $SSID ]; then
     if [ -n "$DROUTE" ]; then
-        sudo ip route del default via $DROUTE
-        sudo ip route add default via $DROUTE metric $METRIC
+        nmcli con modify "$SSID" ipv4.routes "0.0.0.0/0 $DROUTE $METRIC"
+        nmcli con down "$SSID" && nmcli con up "$SSID"
+        sleep 10
     fi
     can_upload=1
 else
     bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
     systemctl --user stop submit_report.timer
+    rm $COUNT_FILE
 fi
 
 upload() {
@@ -208,9 +224,10 @@ if [ $failed -eq 1 ]; then
 elif [ $can_upload -eq 1 ]; then
     bash $scriptdir/notification.sh $CABOT_NAME"の自動アップロードを終了します。"
     systemctl --user stop submit_report.timer
+    rm $COUNT_FILE
     if [ -n "$DROUTE" ]; then
-        sudo ip route del default via $DROUTE
-        sudo ip route add default via $DROUTE metric 600
+        nmcli con modify "$SSID" ipv4.routes ""
+        nmcli con down "$SSID" && nmcli con up "$SSID"
     fi
 fi
 
