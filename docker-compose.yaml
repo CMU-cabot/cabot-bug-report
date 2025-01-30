@@ -4,11 +4,9 @@ services:
     volumes:
       - /dev:/dev
       - /sys/devices:/sys/devices
-      - /var/lib/bluetooth:/var/lib/bluetooth
       - /run/dbus:/run/dbus
       - /run/udev:/run/udev:ro
       - /var/run/dbus:/var/run/dbus
-      - /etc/bluetooth/:/etc/bluetooth
       - /lib/modules:/lib/modules:ro
       - /etc/localtime:/etc/localtime:ro
       - /opt/cabot:/opt/cabot
@@ -38,6 +36,7 @@ services:
       - CABOT_NAME
       - SSID
       - SLACK_TOKEN
+      - DROUTE
     privileged: true
 # device, bluetooth
     devices:
