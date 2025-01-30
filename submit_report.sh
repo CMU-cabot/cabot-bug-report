@@ -23,13 +23,16 @@ timer_count=$(cat "$COUNT_FILE")
 source $scriptdir/.env
 
 if [ -z "$ssid" ]; then
-    bash $scriptdir/notification.sh "timer起動"$timer_count"回目"
-    echo $timer_count > $COUNT_FILE
-    if [ "$timer_count" -gt 3 ]; then
-        systemctl --user stop submit_report.timer
-        rm $COUNT_FILE
+    timer_status=$(systemctl --user is-active submit_report.timer)
+    if [ "active" == "$timer_status" ]; then
+        bash $scriptdir/notification.sh "timer起動"$timer_count"回目"
+        echo $timer_count > $COUNT_FILE
+        if [ "$timer_count" -gt 3 ]; then
+            systemctl --user stop submit_report.timer
+            rm $COUNT_FILE
+        fi
+        exit
     fi
-    exit
 elif [ $ssid == $SSID ]; then
     if [ -n "$DROUTE" ]; then
         nmcli con modify "$SSID" ipv4.routes "0.0.0.0/0 $DROUTE $METRIC"
