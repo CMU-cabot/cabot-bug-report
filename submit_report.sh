@@ -12,8 +12,6 @@ ssid=`iwgetid -r`
 can_upload=0
 METRIC=50
 
-<<<<<<< HEAD
-=======
 COUNT_FILE="$scriptdir/timer_count"
 if [ ! -f "$COUNT_FILE" ]; then
     echo 0 > $COUNT_FILE
@@ -22,7 +20,6 @@ fi
 timer_count=$(cat "$COUNT_FILE")
 ((timer_count+=1))
 
->>>>>>> change-nw-priority
 source $scriptdir/.env
 
 if [ -z "$ssid" ]; then
