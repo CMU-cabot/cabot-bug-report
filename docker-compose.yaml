@@ -1,0 +1,46 @@
+services:
+  log:
+    build: .
+    volumes:
+      - /dev:/dev
+      - /sys/devices:/sys/devices
+      - /run/dbus:/run/dbus
+      - /run/udev:/run/udev:ro
+      - /var/run/dbus:/var/run/dbus
+      - /lib/modules:/lib/modules:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /opt/cabot:/opt/cabot
+      - ./content:/home/developer/content
+      - ./error:/home/developer/error
+      - ./issue_list.txt:/home/developer/issue_list.txt
+# for systemctl
+      - /run/systemd/system:/run/systemd/system
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+      - /sys/fs/cgroup:/sys/fs/cgroup
+# for systemctl --user
+      - /run/user:/run/user
+      - /usr/bin/docker:/usr/bin/docker
+      - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - USERNAME
+      - PASSWORD
+      - REPO_OWNER
+      - REPO_NAME
+      - REPO_OWNER_FOR_ERROR
+      - REPO_NAME_FOR_ERROR
+      - CLIENT_ID
+      - CLIENT_SECRET
+      - ENTERPRISE_ID
+      - FOLDER_ID
+      - CABOT_NAME
+      - SSID
+      - SLACK_TOKEN
+      - DROUTE
+    privileged: true
+# device, bluetooth
+    devices:
+      - /dev/dri
+# device, bluetoo
+    network_mode: host
+    command: ./submit_report.sh
