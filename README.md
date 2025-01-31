@@ -10,19 +10,36 @@ sudo ln -sf $cabotdir /opt/cabot
   - Authentication is Client Credentials Grant
 
 ## Make .env file
-- `.env` file is ignored because it has private information
-- Set the following environment variables
-```
-USERNAME        # github account name
-PASSWORD        # github access token
-REPO_OWNER      # owner of repository where issue is created
-REPO_NAME       # repository where issue is created
-CLIENT_ID       # your client_id to use Box API
-CLIENT_SECRET   # your client_secret to use Box API
-ENTERPRISE_ID   # your enterprise_id to use Box API
-FOLDER_ID       # folder_id of root folder to upload logs
-SSID            # This system works only when connected to the SSID
-```
+- **Required settings**
+  ```
+  USERNAME        # github account name
+  PASSWORD        # github access token
+  REPO_OWNER      # owner of repository where issue is created
+  REPO_NAME       # repository where issue is created
+  CLIENT_ID       # your client_id to use Box API
+  CLIENT_SECRET   # your client_secret to use Box API
+  ENTERPRISE_ID   # your enterprise_id to use Box API
+  FOLDER_ID       # folder_id of root folder to upload logs
+  SSID            # This system works only when connected to the SSID
+  ```
+
+- Optional settings for notice
+  ```
+  REPO_OWNER_FOR_ERROR      # owner of repository where issue is created if you want notifications for failure to upload or make issue
+  REPO_NAME_FOR_ERROR       # repository where issue is created if you want notifications for failure to upload or make issue
+  SLACK_TOKEN     # slack api token (incoming-webhook)
+  ```
+
+- Optional settings for network priority
+  ```
+  DROUTE          # default via IP of SSID
+  METRIC          # default is 50
+  ```
+
+- Others
+  ```
+  CABOT_NAME      # robot name used to identify the machine ex) as issue label
+  ```
 
 ## Install
 
@@ -54,10 +71,3 @@ logs = "cabot_yyyy-MM-dd-hh-mm-ss cabot_yyyy-MM-dd-hh-mm-ss"
 command = ["./create_list.sh", title, body, logs]
 subprocess.call(command)
 ```
-
-### Recommend
-- if you want to stop this timer while the Cabot system is running, change it as follows.
-  - add the following to cabot.service
-  `ExecStop = systemctl --user start submit_report.timer`
-  - add the following to submit_report.timer
-  `Conflicts=cabot.service`

@@ -37,6 +37,7 @@ services:
       - SSID
       - SLACK_TOKEN
       - DROUTE
+      - METRIC
     privileged: true
 # device, bluetooth
     devices:
