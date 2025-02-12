@@ -35,8 +35,8 @@ if [ -z "$ssid" ]; then
     fi
 elif [ $ssid == $SSID ]; then
     if [ -n "$DROUTE" ]; then
-        nmcli con modify "$SSID" ipv4.routes "0.0.0.0/0 $DROUTE $METRIC"
-        nmcli con down "$SSID" && nmcli con up "$SSID"
+        sudo nmcli con modify "$SSID" ipv4.routes "0.0.0.0/0 $DROUTE $METRIC"
+        sudo nmcli con down "$SSID" && sudo nmcli con up "$SSID"
         sleep 10
     fi
     can_upload=1
@@ -124,6 +124,10 @@ while getopts "u:" opt; do
     case $opt in
       u)
         upload $OPTARG
+	if [ -n "$DROUTE" ]; then
+            sudo nmcli con modify "$SSID" ipv4.routes ""
+            sudo nmcli con down "$SSID" && nmcli con up "$SSID"
+    	fi
         exit
         ;;
     esac
@@ -237,8 +241,8 @@ elif [ $can_upload -eq 1 ]; then
     systemctl --user stop submit_report.timer
     rm $COUNT_FILE
     if [ -n "$DROUTE" ]; then
-        nmcli con modify "$SSID" ipv4.routes ""
-        nmcli con down "$SSID" && nmcli con up "$SSID"
+        sudo nmcli con modify "$SSID" ipv4.routes ""
+        sudo nmcli con down "$SSID" && sudo nmcli con up "$SSID"
     fi
 fi
 
