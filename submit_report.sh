@@ -5,8 +5,9 @@ scriptdir=`dirname $0`
 cd $scriptdir
 scriptdir=`pwd`
 
-cabotdir="/opt/cabot"
-logdir="$cabotdir/docker/home/.ros/log"
+source $scriptdir/.env
+
+logdir="${LOGDIR:-/opt/cabot/docker/home/.ros/log}"
 
 ssid=`iwgetid -r`
 can_upload=0
@@ -19,8 +20,6 @@ fi
 
 timer_count=$(cat "$COUNT_FILE")
 ((timer_count+=1))
-
-source $scriptdir/.env
 
 if [ -z "$ssid" ]; then
     timer_status=$(systemctl --user is-active submit_report.timer)
