@@ -10,6 +10,9 @@ RUN apt update && \
 	sudo \
 	systemd \
     wireless-tools \
+	cifs-utils \
+	smbclient \
+	rsync \
 	&& \
 	apt clean && \
 	rm -rf /var/lib/apt/lists/*

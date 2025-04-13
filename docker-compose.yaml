@@ -38,6 +38,11 @@ services:
       - SLACK_TOKEN
       - DROUTE
       - METRIC
+      - NAS_USER
+      - NAS_PASSWORD
+      - NAS_IP
+      - NAS_SHARE_DIR
+      - CABOT_NAME
     privileged: true
 # device, bluetooth
     devices:
