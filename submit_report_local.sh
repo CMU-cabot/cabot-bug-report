@@ -21,19 +21,18 @@ do
     SIZE=`du -d 0 $item | cut -f 1`
 
     FILE1="${item}_log.tar"
-    if [ ! -e $FILE1 ]; then
-        tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
+    if [ ! -e /mnt/smbshare/$CABOT_NAME/log/$FILE1 ]; then
+        tar --exclude="ros2_topics" --exclude="image_topics" -cvf /mnt/smbshare/$CABOT_NAME/log/$FILE1 $item
     fi
     if [ $SIZE -gt 13000000 ]; then
         PARTS=(${item}_ros2_topics_part_*)
-        if [ ! -e "${PARTS[0]}" ]; then
-            tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
+        if [ ! -e "/mnt/smbshare/$CABOT_NAME/log/${PARTS[0]}" ]; then
+            tar -cvf - $item/ros2_topics | split -b 10G - /mnt/smbshare/$CABOT_NAME/log/${item}_ros2_topics_part_
         fi
     else
         FILE2="${item}_ros2_topics.tar"
-        if [ ! -e $FILE2 ]; then
-            tar -cvf $FILE2 $item/ros2_topics
+        if [ ! -e /mnt/smbshare/$CABOT_NAME/log/$FILE2 ]; then
+            tar -cvf /mnt/smbshare/$CABOT_NAME/log/$FILE2 $item/ros2_topics
         fi
     fi
 done
-rsync -av $logdir/cabot_${date}*.tar /mnt/smbshare/$CABOT_NAME/log/
