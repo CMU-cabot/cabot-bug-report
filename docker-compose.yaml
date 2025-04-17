@@ -43,6 +43,8 @@ services:
       - NAS_IP
       - NAS_SHARE_DIR
       - CABOT_NAME
+      - HOST_UID
+      - HOST_GID
     privileged: true
 # device, bluetooth
     devices:

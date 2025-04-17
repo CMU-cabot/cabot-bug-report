@@ -52,7 +52,9 @@ upload() {
     SIZE=`du -d 0 $item | cut -f 1`
 
     FILE1="${item}_log.tar"
-    tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
+    if [ ! -e $FILE1 ]; then
+        tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
+    fi
     tars=($FILE1)
     if [ $SIZE -gt 13000000 ]; then
         PARTS=(${item}_ros2_topics_part_*)
