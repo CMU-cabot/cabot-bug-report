@@ -131,6 +131,7 @@ if __name__ == "__main__":
 
     parser.add_option('-f', '--file', type=str, help='bag file to upload')
     parser.add_option('-s', '--split', type=str, help='bag file to upload')
+    parser.add_option('-p', '--path', type=str, help='bag file to upload')
 
     (options, args) = parser.parse_args()
 
@@ -139,13 +140,13 @@ if __name__ == "__main__":
         sys.exit(0)
 
     file_name = options.file
-    file_path = '/opt/cabot/docker/home/.ros/log/'
+    file_path = options.path
 
 
     year = file_name[6:10]
     month = file_name[11:13]
     day = file_name[14:16]
-    file_path = file_path + file_name
+    file_path = file_path + "/" + file_name
 
     x = [year, month, day]
     folder_id = ""

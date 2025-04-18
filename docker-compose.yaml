@@ -22,6 +22,8 @@ services:
       - /usr/bin/docker:/usr/bin/docker
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose
       - /var/run/docker.sock:/var/run/docker.sock
+# for access nas
+      - /mnt/smbshare:/mnt/smbshare
     environment:
       - USERNAME
       - PASSWORD
@@ -45,6 +47,8 @@ services:
       - CABOT_NAME
       - HOST_UID
       - HOST_GID
+      - RUNDIR
+      - LOGDIR
     privileged: true
 # device, bluetooth
     devices:

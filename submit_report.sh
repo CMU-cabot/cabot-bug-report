@@ -8,7 +8,7 @@ scriptdir=`pwd`
 source $scriptdir/.env
 
 logdir="${LOGDIR:-/opt/cabot/docker/home/.ros/log}"
-
+rundir="${RUNDIR:-$scriptdir}"
 ssid=`iwgetid -r`
 can_upload=0
 METRIC=50
@@ -83,7 +83,7 @@ upload() {
         echo start uploading $upload_item
         bash $scriptdir/notification.sh "start uploading ${upload_item}"
         echo folder_id = $folder_id
-        python3 upload.py -f $upload_item -s $folder_id  > stdout.log 2> stderr.log
+        python3 upload.py -f $upload_item -s $folder_id -p $logdir > stdout.log 2> stderr.log
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$(cat stderr.log)" -u "$upload_item"
             url+=("None")
@@ -136,7 +136,7 @@ done
 shift $((OPTIND-1))
 
 failed=0
-cp $scriptdir/issue_list.txt while.txt
+cp $rundir/issue_list.txt while.txt
 while read line
 do
     echo $line
@@ -149,13 +149,12 @@ do
         log_name=()
         all_upload=0
 
-        mkdir -p $scriptdir/content
-        mkdir -p $scriptdir/error
+        mkdir -p $rundir/content
+        mkdir -p $rundir/error
 
-        title_path=$scriptdir/content/$title_file_name
-        file_path=$scriptdir/content/$body_file_name
+        title_path=$rundir/content/$title_file_name
+        file_path=$rundir/content/$body_file_name
         notification=0
-        source $scriptdir/.env
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             num=${BASH_REMATCH[1]}
@@ -210,8 +209,8 @@ do
             else
                 response=$(cat stdout.log)
                 issue_num=$(cat stdout.log | tail -n 1)
-                sed "s/\(.*$log\)/\1,REPORTED=$issue_num/" $scriptdir/issue_list.txt > tmp_file \
-                  && cp tmp_file $scriptdir/issue_list.txt \
+                sed "s/\(.*$log\)/\1,REPORTED=$issue_num/" $rundir/issue_list.txt > tmp_file \
+                  && cp tmp_file $rundir/issue_list.txt \
                   && rm tmp_file
             fi
         fi
@@ -221,8 +220,8 @@ do
 
         if [ $notification -eq 2 ]; then
             if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
-                sed "s/\(.*$log\)/\1,ALL_UPLOAD/" $scriptdir/issue_list.txt > tmp_file \
-                  && cp tmp_file $scriptdir/issue_list.txt \
+                sed "s/\(.*$log\)/\1,ALL_UPLOAD/" $rundir/issue_list.txt > tmp_file \
+                  && cp tmp_file $rundir/issue_list.txt \
                   && rm tmp_file
             fi
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${issue_num}"
