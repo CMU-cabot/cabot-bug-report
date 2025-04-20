@@ -6,6 +6,7 @@ cleanup() {
     echo "Caught signal, cleaning up..."
     terminating=1
     sleep 1
+    rm ${tars[@]}
     exit 1
 }
 trap cleanup SIGINT SIGTERM SIGHUP
@@ -43,9 +44,6 @@ if [ -z "$date" ]; then
     date=$(date "+%Y-%m-%d")
 fi
 
-rsync -av $scriptdir/content /mnt/smbshare/$CABOT_NAME/
-rsync -av $scriptdir/issue_list.txt /mnt/smbshare/$CABOT_NAME/
-
 items=($(ls $logdir | grep "cabot_${date}" | grep -v .tar | grep -v _part_))
 for item in ${items[@]}
 do
@@ -77,4 +75,8 @@ do
     if [[ $terminating -eq 1 ]]; then
         break
     fi
+    rm ${tars[@]}
 done
+
+rsync -av $scriptdir/content /mnt/smbshare/$CABOT_NAME/
+rsync -av $scriptdir/issue_list.txt /mnt/smbshare/$CABOT_NAME/

@@ -45,29 +45,68 @@ else
     rm $COUNT_FILE
 fi
 
+tar_skip=0
+
+show_help() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  -u <item>   Upload the specified item."
+    echo "  -t          Skip tar creation and use existing tar files."
+    echo "  -h          Show this help message."
+}
+
+while getopts "u:th" opt; do
+    case $opt in
+      u)
+        upload $OPTARG
+        if [ -n "$DROUTE" ]; then
+            sudo nmcli con modify "$SSID" ipv4.routes ""
+            sudo nmcli con down "$SSID" && nmcli con up "$SSID"
+        fi
+        exit
+        ;;
+      t)
+        tar_skip=1
+        ;;
+      h)
+        show_help
+        exit
+        ;;
+      *)
+        show_help
+        exit 1
+        ;;
+    esac
+done
+shift $((OPTIND-1))
+
 upload() {
     local item=$1
 
     cd $logdir
     SIZE=`du -d 0 $item | cut -f 1`
 
-    FILE1="${item}_log.tar"
-    if [ ! -e $FILE1 ]; then
-        tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
-    fi
-    tars=($FILE1)
-    if [ $SIZE -gt 13000000 ]; then
-        PARTS=(${item}_ros2_topics_part_*)
-        if [ ! -e "${PARTS[0]}" ]; then
-            tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
-        fi
-        tars+=(`ls | grep ${item}_ros2_topics_part_`)
+    if [ $tar_skip -eq 1 ]; then
+        tars=($(ls | grep ${item}_))
     else
-        FILE2="${item}_ros2_topics.tar"
-        if [ ! -e $FILE2 ]; then
-            tar -cvf $FILE2 $item/ros2_topics
+        FILE1="${item}_log.tar"
+        if [ ! -e $FILE1 ]; then
+            tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
         fi
-        tars+=($FILE2)
+        tars=($FILE1)
+        if [ $SIZE -gt 13000000 ]; then
+            PARTS=(${item}_ros2_topics_part_*)
+            if [ ! -e "${PARTS[0]}" ]; then
+                tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
+            fi
+            tars+=(`ls | grep ${item}_ros2_topics_part_`)
+        else
+            FILE2="${item}_ros2_topics.tar"
+            if [ ! -e $FILE2 ]; then
+                tar -cvf $FILE2 $item/ros2_topics
+            fi
+            tars+=($FILE2)
+        fi
     fi
     echo ${tars[@]}
 
@@ -120,20 +159,6 @@ cp_log() {
         cp $select $logdir/$log
     fi
 }
-
-while getopts "u:" opt; do
-    case $opt in
-      u)
-        upload $OPTARG
-	if [ -n "$DROUTE" ]; then
-            sudo nmcli con modify "$SSID" ipv4.routes ""
-            sudo nmcli con down "$SSID" && nmcli con up "$SSID"
-    	fi
-        exit
-        ;;
-    esac
-done
-shift $((OPTIND-1))
 
 failed=0
 cp $rundir/issue_list.txt while.txt
