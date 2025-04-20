@@ -13,6 +13,6 @@ fi
 
 export $(cat $scriptdir/.env | grep -v "#" | xargs)
 
-if [[ $ssid != $SSID ]]; then
+if [[ $ssid != $WIFI_SSID ]]; then
     exit 1
 fi

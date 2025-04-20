@@ -7,8 +7,8 @@ load_dotenv()
 
 # Authentication for user filing issue (must have read/write access to
 # repository to add issue to)
-USERNAME = os.environ.get('USERNAME')
-PASSWORD = os.environ.get('PASSWORD')
+GIT_USERNAME = os.environ.get('GIT_USERNAME')
+GIT_PASSWORD = os.environ.get('GIT_PASSWORD')
 
 # The repository to add this issue to
 REPO_OWNER = os.environ.get('REPO_OWNER_FOR_ERROR')
@@ -20,7 +20,7 @@ def make_github_issue(title, body=None):
     url = 'https://api.github.com/repos/%s/%s/issues' % (REPO_OWNER, REPO_NAME)
     # Create an authenticated session to create the issue
     session = requests.session()
-    session.auth = (USERNAME, PASSWORD)
+    session.auth = (GIT_USERNAME, GIT_PASSWORD)
     # Create our issue
     issue = {'title': title,
              'body': body}

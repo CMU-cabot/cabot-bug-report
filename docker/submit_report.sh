@@ -7,11 +7,11 @@ scriptdir=`pwd`
 
 source $scriptdir/.env
 
-logdir="${LOGDIR:-/opt/cabot/docker/home/.ros/log}"
-rundir="${RUNDIR:-$scriptdir}"
+logdir=/log
+rundir=$scriptdir
 ssid=`iwgetid -r`
 can_upload=0
-METRIC=50
+WIFI_METRIC=50
 
 COUNT_FILE="$scriptdir/timer_count"
 if [ ! -f "$COUNT_FILE" ]; then
@@ -32,10 +32,10 @@ if [ -z "$ssid" ]; then
         fi
         exit
     fi
-elif [ $ssid == $SSID ]; then
-    if [ -n "$DROUTE" ]; then
-        sudo nmcli con modify "$SSID" ipv4.routes "0.0.0.0/0 $DROUTE $METRIC"
-        sudo nmcli con down "$SSID" && sudo nmcli con up "$SSID"
+elif [ $ssid == $WIFI_SSID ]; then
+    if [ -n "$WIFI_DROUTE" ]; then
+        sudo nmcli con modify "$WIFI_SSID" ipv4.routes "0.0.0.0/0 $WIFI_DROUTE $WIFI_METRIC"
+        sudo nmcli con down "$WIFI_SSID" && sudo nmcli con up "$WIFI_SSID"
         sleep 10
     fi
     can_upload=1
@@ -59,9 +59,9 @@ while getopts "u:th" opt; do
     case $opt in
       u)
         upload $OPTARG
-        if [ -n "$DROUTE" ]; then
-            sudo nmcli con modify "$SSID" ipv4.routes ""
-            sudo nmcli con down "$SSID" && nmcli con up "$SSID"
+        if [ -n "$WIFI_DROUTE" ]; then
+            sudo nmcli con modify "$WIFI_SSID" ipv4.routes ""
+            sudo nmcli con down "$WIFI_SSID" && nmcli con up "$WIFI_SSID"
         fi
         exit
         ;;
@@ -265,9 +265,9 @@ elif [ $can_upload -eq 1 ]; then
     bash $scriptdir/notification.sh $CABOT_NAME"の自動アップロードを終了します。"
     systemctl --user stop submit_report.timer
     rm $COUNT_FILE
-    if [ -n "$DROUTE" ]; then
-        sudo nmcli con modify "$SSID" ipv4.routes ""
-        sudo nmcli con down "$SSID" && sudo nmcli con up "$SSID"
+    if [ -n "$WIFI_DROUTE" ]; then
+        sudo nmcli con modify "$WIFI_SSID" ipv4.routes ""
+        sudo nmcli con down "$WIFI_SSID" && sudo nmcli con up "$WIFI_SSID"
     fi
 fi
 

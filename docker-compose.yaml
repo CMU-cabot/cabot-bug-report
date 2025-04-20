@@ -18,10 +18,10 @@ services:
       - /run/udev:/run/udev:ro
       - /var/run/dbus:/var/run/dbus
       - /lib/modules:/lib/modules:ro
-      - /opt/cabot:/opt/cabot
-      - ./content:/home/developer/content
-      - ./error:/home/developer/error
-      - ./issue_list.txt:/home/developer/issue_list.txt
+      - ${LOGDIR:-/opt/cabot/docker/home/.ros/log}:/log
+      - ${RUNDIR:-.}/content:/home/developer/content
+      - ${RUNDIR:-.}/error:/home/developer/error
+      - ${RUNDIR:-.}/issue_list.txt:/home/developer/issue_list.txt
 # for systemctl
       - /run/systemd/system:/run/systemd/system
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -31,34 +31,30 @@ services:
       - /usr/bin/docker:/usr/bin/docker
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose
       - /var/run/docker.sock:/var/run/docker.sock
-# for access nas
-      - /mnt/smbshare:/mnt/smbshare
     environment:
-      - USERNAME
-      - PASSWORD
-      - REPO_OWNER
-      - REPO_NAME
-      - REPO_OWNER_FOR_ERROR
-      - REPO_NAME_FOR_ERROR
-      - CLIENT_ID
-      - CLIENT_SECRET
-      - ENTERPRISE_ID
-      - FOLDER_ID
       - CABOT_NAME
-      - SSID
-      - SLACK_TOKEN
-      - DROUTE
-      - METRIC
-      - NAS_USER
-      - NAS_PASSWORD
-      - NAS_IP
-      - NAS_SHARE_DIR
-      - CABOT_NAME
-      - HOST_UID
+      - BOX_CLIENT_ID
+      - BOX_CLIENT_SECRET
+      - BOX_ENTERPRISE_ID
+      - BOX_FOLDER_ID
+      - GIT_USERNAME
+      - GIT_PASSWORD
       - HOST_GID
       - HOST_TZ
-      - RUNDIR
+      - HOST_UID
       - LOGDIR
+      - NAS_IP
+      - NAS_PASSWORD
+      - NAS_SHARE_DIR
+      - NAS_USER
+      - REPO_NAME
+      - REPO_NAME_FOR_ERROR
+      - REPO_OWNER
+      - REPO_OWNER_FOR_ERROR
+      - SLACK_TOKEN
+      - WIFI_DROUTE
+      - WIFI_METRIC
+      - WIFI_SSID
     privileged: true
 # device, bluetooth
     devices:

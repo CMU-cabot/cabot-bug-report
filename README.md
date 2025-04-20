@@ -12,15 +12,15 @@ sudo ln -sf $cabotdir /opt/cabot
 ## Make .env file
 - **Required settings**
   ```
-  USERNAME        # github account name
-  PASSWORD        # github access token
+  GIT_USERNAME        # github account name
+  GIT_PASSWORD        # github access token
   REPO_OWNER      # owner of repository where issue is created
   REPO_NAME       # repository where issue is created
-  CLIENT_ID       # your client_id to use Box API
-  CLIENT_SECRET   # your client_secret to use Box API
-  ENTERPRISE_ID   # your enterprise_id to use Box API
-  FOLDER_ID       # folder_id of root folder to upload logs
-  SSID            # This system works only when connected to the SSID
+  BOX_CLIENT_ID       # your client_id to use Box API
+  BOX_CLIENT_SECRET   # your client_secret to use Box API
+  BOX_ENTERPRISE_ID   # your enterprise_id to use Box API
+  BOX_FOLDER_ID       # folder_id of root folder to upload logs
+  WIFI_SSID            # This system works only when connected to the WIFI_SSID
   ```
 
 - Optional settings for notice
@@ -32,8 +32,8 @@ sudo ln -sf $cabotdir /opt/cabot
 
 - Optional settings for network priority
   ```
-  DROUTE          # default via IP of SSID
-  METRIC          # default is 50
+  WIFI_DROUTE          # default via IP of WIFI_SSID
+  WIFI_METRIC          # default is 50
   ```
 
 - Others

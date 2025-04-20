@@ -54,9 +54,9 @@ class CustomAutorizedSession(AuthorizedSession):
         super().__init__(oauth, network_layer=network_layer)
 
 auth = CCGAuth(
-client_id = os.environ.get('CLIENT_ID'),
-client_secret = os.environ.get('CLIENT_SECRET'),
-enterprise_id = os.environ.get('ENTERPRISE_ID')
+client_id = os.environ.get('BOX_CLIENT_ID'),
+client_secret = os.environ.get('BOX_CLIENT_SECRET'),
+enterprise_id = os.environ.get('BOX_ENTERPRISE_ID')
 )
 
 custom_session = CustomAutorizedSession(auth)
@@ -88,7 +88,7 @@ def get_folder_url(folder_id):
 
 @error_handler
 def get_folder_id(elements):
-    folder_id = os.environ.get('FOLDER_ID')
+    folder_id = os.environ.get('BOX_FOLDER_ID')
     for num in elements:
         if  subfolder_id := check_folder(folder_id, num):
             folder_id = subfolder_id
