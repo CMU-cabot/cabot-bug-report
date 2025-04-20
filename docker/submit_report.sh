@@ -32,7 +32,7 @@ if [ -z "$ssid" ]; then
         fi
         exit
     fi
-elif [ $ssid == $WIFI_SSID ]; then
+elif [ $ssid == "$WIFI_SSID" ]; then
     if [ -n "$WIFI_DROUTE" ]; then
         sudo nmcli con modify "$WIFI_SSID" ipv4.routes "0.0.0.0/0 $WIFI_DROUTE $WIFI_METRIC"
         sudo nmcli con down "$WIFI_SSID" && sudo nmcli con up "$WIFI_SSID"
