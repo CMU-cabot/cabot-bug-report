@@ -3,6 +3,7 @@ FROM ubuntu:22.04
 RUN apt update && \
 	apt install -y --no-install-recommends \
     curl \
+	gosu \
 	network-manager \
 	python3 \
 	python3-pip \
@@ -32,7 +33,6 @@ RUN useradd -m $USERNAME && \
 		usermod  --uid $UID $USERNAME && \
 		groupmod --gid $UID $USERNAME
 
-USER $USERNAME
 ENV HOME /home/$USERNAME
 WORKDIR $HOME
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 stop_launch() {
-    docker compose down log
+    docker compose down
     exit 0
 }
 
