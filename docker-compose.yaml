@@ -18,6 +18,7 @@ services:
       - /run/udev:/run/udev:ro
       - /var/run/dbus:/var/run/dbus
       - /lib/modules:/lib/modules:ro
+      - /opt/cabot:/opt/cabot
       - ${LOGDIR:-/opt/cabot/docker/home/.ros/log}:/log
       - ${RUNDIR:-.}/content:/home/developer/content
       - ${RUNDIR:-.}/error:/home/developer/error
@@ -44,6 +45,7 @@ services:
       - HOST_UID
       - LOGDIR
       - NAS_IP
+      - NAS_IP_WIRED
       - NAS_PASSWORD
       - NAS_SHARE_DIR
       - NAS_USER

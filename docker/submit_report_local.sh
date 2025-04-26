@@ -15,12 +15,18 @@ pwd=`pwd`
 scriptdir=`dirname $0`
 cd $scriptdir
 scriptdir=`pwd`
-logdir="/opt/cabot/docker/home/.ros/log"
+logdir=$LOGDIR
 
 source $scriptdir/.env
 
 sudo mkdir -p /mnt/smbshare
-sudo mount -t cifs -o username=$NAS_USER,password=$NAS_PASSWORD,uid=$HOST_UID,gid=$HOST_GID,cache=none,file_mode=0664,dir_mode=0755 //$NAS_IP/$NAS_SHARE_DIR /mnt/smbshare
+if sudo mount -t cifs -o username=$NAS_USER,password=$NAS_PASSWORD,uid=$HOST_UID,gid=$HOST_GID,cache=none,file_mode=0664,dir_mode=0755 //$NAS_IP_WIRED/$NAS_SHARE_DIR /mnt/smbshare; then
+    bash $scriptdir/notification.sh "sudo mount Ether"
+elif sudo mount -t cifs -o username=$NAS_USER,password=$NAS_PASSWORD,uid=$HOST_UID,gid=$HOST_GID,cache=none,file_mode=0664,dir_mode=0755 //$NAS_IP/$NAS_SHARE_DIR /mnt/smbshare; then
+    bash $scriptdir/notification.sh "sudo mount wireless"
+else
+    bash $scriptdir/notification.sh "mount failure"
+fi
 
 # Parse options
 while getopts "d:h" opt; do
@@ -43,6 +49,8 @@ done
 if [ -z "$date" ]; then
     date=$(date "+%Y-%m-%d")
 fi
+
+bash $scriptdir/notification.sh "start upload ${item} from ${CABOT_NAME} to NAS"
 
 items=($(ls $logdir | grep "cabot_${date}" | grep -v .tar | grep -v _part_))
 for item in ${items[@]}
@@ -71,6 +79,7 @@ do
     fi
     echo ${tars[@]}
     echo rsync start
+    bash $scriptdir/notification.sh "uploading ${tars[*]}"
     rsync -av --size-only "${tars[@]}" /mnt/smbshare/$CABOT_NAME/log/ 
     if [[ $terminating -eq 1 ]]; then
         break
@@ -78,5 +87,10 @@ do
     rm ${tars[@]}
 done
 
+# only make issue
+SSID="dummy" $scriptdir/submit_report.sh
+
 rsync -av $scriptdir/content /mnt/smbshare/$CABOT_NAME/
 rsync -av $scriptdir/issue_list.txt /mnt/smbshare/$CABOT_NAME/
+
+bash $scriptdir/notification.sh "finish upload from ${CABOT_NAME} to NAS"
