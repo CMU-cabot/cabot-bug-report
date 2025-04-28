@@ -15,7 +15,7 @@ pwd=`pwd`
 scriptdir=`dirname $0`
 cd $scriptdir
 scriptdir=`pwd`
-logdir=$LOGDIR
+logdir=/log
 
 source $scriptdir/.env
 
