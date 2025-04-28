@@ -55,31 +55,6 @@ show_help() {
     echo "  -h          Show this help message."
 }
 
-while getopts "u:th" opt; do
-    case $opt in
-      u)
-        upload $OPTARG
-        if [ -n "$WIFI_DROUTE" ]; then
-            sudo nmcli con modify "$WIFI_SSID" ipv4.routes ""
-            sudo nmcli con down "$WIFI_SSID" && nmcli con up "$WIFI_SSID"
-        fi
-        exit
-        ;;
-      t)
-        tar_skip=1
-        ;;
-      h)
-        show_help
-        exit
-        ;;
-      *)
-        show_help
-        exit 1
-        ;;
-    esac
-done
-shift $((OPTIND-1))
-
 upload() {
     local item=$1
 
@@ -160,6 +135,31 @@ cp_log() {
     fi
 }
 
+while getopts "u:th" opt; do
+    case $opt in
+      u)
+        upload $OPTARG
+        if [ -n "$WIFI_DROUTE" ]; then
+            sudo nmcli con modify "$WIFI_SSID" ipv4.routes ""
+            sudo nmcli con down "$WIFI_SSID" && nmcli con up "$WIFI_SSID"
+        fi
+        exit
+        ;;
+      t)
+        tar_skip=1
+        ;;
+      h)
+        show_help
+        exit
+        ;;
+      *)
+        show_help
+        exit 1
+        ;;
+    esac
+done
+shift $((OPTIND-1))
+
 failed=0
 cp $rundir/issue_list.txt while.txt
 while read line
@@ -209,6 +209,26 @@ do
         label+=($CABOT_NAME)
         if [[ $all_upload -eq 0 ]]; then
             label+=("未アップロード")
+        fi
+
+        if [[ "$line" =~ CABOT_LAUNCH_IMAGE_TAG=([^,]+) ]]; then
+            label+=(${BASH_REMATCH[1]})
+        else
+            cabot_launch_image_tag=$(grep '^CABOT_LAUNCH_IMAGE_TAG=' $logdir/$log/env-file | awk -F= '{print $2}')
+            label+=($cabot_launch_image_tag)
+            sed "s/\(.*$log\)/\1,CABOT_LAUNCH_IMAGE_TAG=$cabot_launch_image_tag/" $rundir/issue_list.txt > tmp_file \
+                && cp tmp_file $rundir/issue_list.txt \
+                && rm tmp_file
+        fi
+
+        if [[ "$line" =~ CABOT_SITE_VERSION=([^,]+) ]]; then
+            label+=(${BASH_REMATCH[1]})
+        else
+            cabot_site_version=$(grep '^CABOT_SITE_VERSION=' $logdir/$log/env-file | awk -F= '{print $2}')
+            label+=($cabot_site_version)
+            sed "s/\(.*$log\)/\1,CABOT_SITE_VERSION=$cabot_site_version/" $rundir/issue_list.txt > tmp_file \
+                && cp tmp_file $rundir/issue_list.txt \
+                && rm tmp_file
         fi
 
         make_issue=1
