@@ -27,6 +27,11 @@ else
         do
             read ref_date ref_time < <(echo $same_date_log | sed -E 's/cabot_([0-9]{4}-[0-9]{2}-[0-9]{2})-([0-9]{2}-[0-9]{2}-[0-9]{2})/\1 \2/')
             ref_timestamp=$(date -d "$ref_date ${ref_time//-/:}" "+%s")
+            current_timestamp=$(date "+%s")
+            if [ "$current_timestamp" -lt "$ref_timestamp" ]; then
+                ref_timestamp=$current_timestamp
+            fi
+
             if (( timestamp < ref_timestamp )); then
                 nanoseconds=$((($ref_timestamp - $timestamp)*1000000000))
                 break
