@@ -116,27 +116,38 @@ cp_log() {
 
     timestamp=$(date -d "${time//-/:}" "+%s")
 
-    cd /opt/cabot-ble-server/log
+    cd $logdir
+    if [ ! -d "./$log" ]; then
+        return 0
+    fi
 
-    server_log_list=($(ls | grep $date))
+    nanosecond=$(bash $scriptdir/get_duration.sh $log)
+    duration=$((nanosecond / (10**9)))
 
+    server_log_list=($(ls | grep ^$date))
+    select=()
     for server_log in ${server_log_list[@]}
     do
-        i_time=$(echo $server_log | sed -E 's/cabot-ble-server_[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2})\.log/\1/')
+        i_time=$(echo $server_log | sed -E 's/.*[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2}).*/\1/')
         i_timestamp=$(date -d "${i_time//-/:}" "+%s")
-        if (( timestamp < i_timestamp )); then
+        if (( timestamp + duration < i_timestamp )); then
             break
         fi
-        select=$server_log
+        select+=($server_log)
     done
 
-    if [ -n "$select" ]; then
-        cp $select $logdir/$log
-    fi
+    for select_item in ${select[@]}
+    do
+        cp -r $select_item $logdir/$log
+    done
 }
 
-while getopts "u:th" opt; do
+while getopts "c:u:th" opt; do
     case $opt in
+      c)
+        cp_log $OPTARG
+        exit
+        ;;
       u)
         upload $OPTARG
         if [ -n "$WIFI_DROUTE" ]; then

@@ -22,6 +22,7 @@ services:
       - ${RUNDIR:-.}/content:/home/developer/content
       - ${RUNDIR:-.}/error:/home/developer/error
       - ${RUNDIR:-.}/issue_list.txt:/home/developer/issue_list.txt
+      - ./get_duration.sh:/home/developer/get_duration.sh
 # for systemctl
       - /run/systemd/system:/run/systemd/system
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -42,7 +43,7 @@ services:
       - HOST_GID
       - HOST_TZ
       - HOST_UID
-      - LOGDIR
+      - LOGDIR=${LOGDIR:-/log}
       - NAS_IP
       - NAS_IP_WIRED
       - NAS_PASSWORD

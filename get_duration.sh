@@ -5,7 +5,7 @@ scriptdir=`dirname $0`
 cd $scriptdir
 scriptdir=`pwd`
 
-cd /opt/cabot/docker/home/.ros/log/
+cd ${LOGDIR:-/opt/cabot/docker/home/.ros/log}
 
 if [[ ! -z $1 ]]; then
     log=$1
