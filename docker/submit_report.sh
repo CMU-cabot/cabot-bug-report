@@ -121,7 +121,7 @@ cp_log() {
         return 0
     fi
 
-    nanosecond=$(bash $script/get_duration.sh $log)
+    nanosecond=$(bash $scriptdir/get_duration.sh $log)
     duration=$((nanosecond / (10**9)))
 
     server_log_list=($(ls | grep ^$date))
