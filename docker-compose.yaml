@@ -43,7 +43,7 @@ services:
       - HOST_GID
       - HOST_TZ
       - HOST_UID
-      - LOGDIR
+      - LOGDIR=${LOGDIR:-/log}
       - NAS_IP
       - NAS_IP_WIRED
       - NAS_PASSWORD
