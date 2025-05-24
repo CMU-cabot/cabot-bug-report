@@ -22,6 +22,7 @@ services:
       - ${RUNDIR:-.}/content:/home/developer/content
       - ${RUNDIR:-.}/error:/home/developer/error
       - ${RUNDIR:-.}/issue_list.txt:/home/developer/issue_list.txt
+      - ./get_duration.sh:/home/developer/get_duration.sh
 # for systemctl
       - /run/systemd/system:/run/systemd/system
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
