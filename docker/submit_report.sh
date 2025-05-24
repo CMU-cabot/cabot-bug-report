@@ -142,8 +142,12 @@ cp_log() {
     done
 }
 
-while getopts "u:th" opt; do
+while getopts "c:u:th" opt; do
     case $opt in
+      c)
+        cp_log $OPTARG
+        exit
+        ;;
       u)
         upload $OPTARG
         if [ -n "$WIFI_DROUTE" ]; then
