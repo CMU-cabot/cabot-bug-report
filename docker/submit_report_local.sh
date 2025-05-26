@@ -54,6 +54,9 @@ bash $scriptdir/notification.sh "start upload ${item} from ${CABOT_NAME} to NAS"
 
 mkdir -p $logdir/tmp
 
+# only make issue
+WIFI_SSID="dummy" $scriptdir/submit_report.sh
+
 items=($(ls $logdir | grep "cabot_${date}" | grep -v .tar | grep -v _part_))
 for item in ${items[@]}
 do
@@ -90,9 +93,6 @@ do
     rm ${tars[@]}
     mv $item $logdir/tmp/
 done
-
-# only make issue
-WIFI_SSID="dummy" $scriptdir/submit_report.sh
 
 rsync -av $scriptdir/content /mnt/smbshare/$CABOT_NAME/
 rsync -av $scriptdir/issue_list.txt /mnt/smbshare/$CABOT_NAME/
