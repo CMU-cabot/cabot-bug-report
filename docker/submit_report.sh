@@ -192,11 +192,18 @@ do
         file_path=$rundir/content/$body_file_name
         notification=0
 
+        label=()
+        label+=($CABOT_NAME)
+
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             num=${BASH_REMATCH[1]}
-            result=`python3 make_issue.py -c -i $num`
+            read -r state labels_csv < <(python3 make_issue.py -c -i "$num")
+            IFS=',' read -r -a labels <<< "$labels_csv"
+            echo "state = $state"
+            echo "labels = ${labels[*]}"
+            label+=("${labels[@]}")
 
-            if [ "$result" = "closed" ]; then
+            if [ "$state" = "closed" ]; then
                 continue
             fi
         fi
@@ -216,8 +223,6 @@ do
             ((notification+=$all_upload))
         fi
 
-        label=()
-        label+=($CABOT_NAME)
         if [[ $all_upload -eq 0 ]]; then
             label+=("未アップロード")
         fi

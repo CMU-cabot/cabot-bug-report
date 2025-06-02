@@ -67,7 +67,10 @@ def check_close(num, retry=0, max_retries=5, delay=2):
     try:
         r = session.get(url)
         if r.status_code == 200:
-            print(r.json().get("state"))
+            data = r.json()
+            state = data.get("state")
+            labels = [lab["name"] for lab in data["labels"]]
+            print(f"{state}\t{','.join(labels)}")
             sys.exit(0)
         else:
             if retry < max_retries:
@@ -99,8 +102,7 @@ title = ""
 body = ""
 dic = dict(zip(args.log_name, args.url))
 num = args.issue_number
-issue_labels = ['報告']
-issue_labels.extend(args.labels)
+issue_labels = args.labels
 
 if args.close_check:
     check_close(num)
@@ -123,4 +125,5 @@ with open(args.file_path, "r") as f:
 if num:
     update_issue_body(num, body, issue_labels)
 else:
+    issue_labels.append('報告')
     make_github_issue(title, body, issue_labels)
