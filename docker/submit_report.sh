@@ -223,8 +223,15 @@ do
             ((notification+=$all_upload))
         fi
 
+        $target="未アップロード"
         if [[ $all_upload -eq 0 ]]; then
-            label+=("未アップロード")
+            label+=($target)
+        else
+            tmp=()
+            for e in "${label[@]}"; do
+                [[ $e == "$target" ]] || tmp+=("$e")
+            done
+            label=("${tmp[@]}")
         fi
 
         if [[ "$line" =~ CABOT_LAUNCH_IMAGE_TAG=([^,]+) ]]; then
