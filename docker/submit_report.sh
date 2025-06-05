@@ -223,7 +223,7 @@ do
             ((notification+=$all_upload))
         fi
 
-        $target="未アップロード"
+        target="未アップロード"
         if [[ $all_upload -eq 0 ]]; then
             label+=($target)
         else
