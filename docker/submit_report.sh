@@ -172,6 +172,8 @@ done
 shift $((OPTIND-1))
 
 failed=0
+today=$(TZ=Asia/Tokyo date -d "$(TZ=Asia/Tokyo date +%F)" +%s)
+retention_period=$((14*24*60*60))  #two weeks
 cp $rundir/issue_list.txt while.txt
 while read line
 do
@@ -179,6 +181,15 @@ do
     title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
     log=`echo $line | cut -d ',' -f 3`
+    if [[ "$line" =~ cabot_([0-9]{4}-[0-9]{2}-[0-9]{2}) ]]; then
+        target_date=${BASH_REMATCH[1]}
+        target_time=$(TZ=Asia/Tokyo date -d "$target_date 00:00:00" +%s)
+        if (( today - target_time > retention_period )); then
+            sed "\|^$line\$|d" $rundir/issue_list.txt > tmp_file \
+                && cp tmp_file $rundir/issue_list.txt \
+                && rm tmp_file
+        fi
+    fi
     if [[ -n $log && ("$line" != *ALL_UPLOAD* || "$line" != *REPORTED*) ]]; then
         list=($log)
         url=()
