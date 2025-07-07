@@ -188,6 +188,7 @@ do
             sed "\|^$line\$|d" $rundir/issue_list.txt > tmp_file \
                 && cp tmp_file $rundir/issue_list.txt \
                 && rm tmp_file
+            continue
         fi
     fi
     if [[ -n $log && ("$line" != *ALL_UPLOAD* || "$line" != *REPORTED*) ]]; then
