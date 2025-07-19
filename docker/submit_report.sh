@@ -57,6 +57,9 @@ show_help() {
 
 upload() {
     local item=$1
+    # initialize
+    log_name=()
+    url=()
 
     cd $logdir
     SIZE=`du -d 0 $item | cut -f 1`
@@ -209,11 +212,17 @@ do
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             num=${BASH_REMATCH[1]}
-            read -r state labels_csv < <(python3 make_issue.py -c -i "$num")
+            read -r state labels_csv log_name_csv url_csv < <(python3 make_issue.py -c -i "$num")
             IFS=',' read -r -a labels <<< "$labels_csv"
+            IFS=',' read -r -a log_names <<< "$log_name_csv"
+            IFS=',' read -r -a urls <<< "$url_csv"
             echo "state = $state"
             echo "labels = ${labels[*]}"
+            echo "log_names = ${log_names[*]}"
+            echo "urls = ${urls[*]}"
             label+=("${labels[@]}")
+            log_name+=("${log_names[@]}")
+            url+=("${urls[@]}")
 
             if [ "$state" = "closed" ]; then
                 continue

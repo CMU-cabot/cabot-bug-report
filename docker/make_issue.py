@@ -3,6 +3,7 @@ import requests
 import argparse
 import os
 import sys
+import re
 import time
 from dotenv import load_dotenv
 load_dotenv()
@@ -70,7 +71,14 @@ def check_close(num, retry=0, max_retries=5, delay=2):
             data = r.json()
             state = data.get("state")
             labels = [lab["name"] for lab in data["labels"]]
-            print(f"{state}\t{','.join(labels)}")
+            body = data.get("body", "")
+
+            pattern = r'\[([^\]]+)\]\((https?://[^\)]+)\)'
+            matches = re.findall(pattern, body)
+            file_names = [m[0] for m in matches]
+            share_urls = [m[1] for m in matches]
+
+            print(f"{state}\t{','.join(labels)}\t{','.join(file_names)}\t{','.join(share_urls)}")
             sys.exit(0)
         else:
             if retry < max_retries:
