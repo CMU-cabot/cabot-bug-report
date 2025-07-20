@@ -209,6 +209,7 @@ do
 
         label=()
         label+=($CABOT_NAME)
+        target="未アップロード"
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             num=${BASH_REMATCH[1]}
@@ -223,6 +224,14 @@ do
             label+=("${labels[@]}")
             log_name+=("${log_names[@]}")
             url+=("${urls[@]}")
+
+            all_upload=1
+            for l_item in "${label[@]}"; do
+                if [[ "$l_item" == "$target" ]]; then
+                    all_upload=0
+                    break
+                fi
+            done
 
             if [ "$state" = "closed" ]; then
                 continue
@@ -244,7 +253,6 @@ do
             ((notification+=$all_upload))
         fi
 
-        target="未アップロード"
         if [[ $all_upload -eq 0 ]]; then
             label+=($target)
         else
