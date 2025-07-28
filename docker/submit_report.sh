@@ -144,7 +144,7 @@ cp_log() {
     tmp_select=""
     for candump in ${candump_list[@]}
     do
-        i_time=$(echo $candump_list | sed -E 's/candump-[0-9]{4}-[0-9]{2}-[0-9]{2}_([0-9]{6}).*/\1/')
+        i_time=$(echo $candump | sed -E 's/candump-[0-9]{4}-[0-9]{2}-[0-9]{2}_([0-9]{6}).*/\1/')
         i_timestamp=$(date -d "${i_time:0:2}:${i_time:2:2}:${i_time:4:2}" "+%s")
         if (( timestamp + duration < i_timestamp )); then
             break
