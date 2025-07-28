@@ -139,24 +139,26 @@ cp_log() {
         select+=($server_log)
     done
 
-    candump_list=($(ls /opt/cabot_candump | grep $date))
+    candump_dir=/opt/cabot_candump
+    candump_list=($(ls $candump_dir | grep $date))
     tmp_select=""
     for candump in ${candump_list[@]}
     do
-        i_time=$(echo $server_log | sed -E 's/candump-[0-9]{4}-[0-9]{2}-[0-9]{2}_([0-9]{6}).*/\1/')
+        i_time=$(echo $candump_list | sed -E 's/candump-[0-9]{4}-[0-9]{2}-[0-9]{2}_([0-9]{6}).*/\1/')
         i_timestamp=$(date -d "${i_time:0:2}:${i_time:2:2}:${i_time:4:2}" "+%s")
         if (( timestamp + duration < i_timestamp )); then
             break
         fi
 
         if (( timestamp > i_timestamp )); then
-            tmp_select=$candump
+            tmp_select="${candump_dir}/${candump}"
             continue
         fi
 
         select+=($tmp_select)
         tmp_select=$candump
     done
+    select+=($tmp_select)
 
     for select_item in ${select[@]}
     do
