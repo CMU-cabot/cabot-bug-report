@@ -11,6 +11,20 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM SIGHUP
 
+rsync_error_msg() {
+  case "$1" in
+    1)  echo "一般エラー" ;;
+    2)  echo "プロトコル不一致" ;;
+    11) echo "ファイルI/Oエラー: ディレクトリ作成失敗など" ;;
+    12) echo "ディレクトリ読み込み失敗" ;;
+    23) echo "部分的転送: 権限問題やファイル欠落など" ;;
+    24) echo "ソース消失" ;;
+    30) echo "I/Oタイムアウト" ;;
+    35) echo "接続切断" ;;
+    *)  echo "不明($1)" ;;
+  esac
+}
+
 pwd=`pwd`
 scriptdir=`dirname $0`
 cd $scriptdir
@@ -53,6 +67,7 @@ fi
 bash $scriptdir/notification.sh "start upload ${item} from ${CABOT_NAME} to NAS"
 
 mkdir -p $logdir/tmp
+sudo mkdir -p /mnt/smbshare/$CABOT_NAME/
 
 # only make issue
 WIFI_SSID="dummy" $scriptdir/submit_report.sh
@@ -87,6 +102,11 @@ do
     echo rsync start
     bash $scriptdir/notification.sh "uploading ${tars[*]}"
     rsync -av --size-only "${tars[@]}" /mnt/smbshare/$CABOT_NAME/log/ 
+    status=$?
+    if [[ $status -ne 0 ]]; then
+        echo "rsync error: $item → $(rsync_error_msg "$status")"
+	continue
+    fi
     if [[ $terminating -eq 1 ]]; then
         break
     fi
