@@ -19,15 +19,6 @@ logdir=/log
 
 source $scriptdir/.env
 
-sudo mkdir -p /mnt/smbshare
-if sudo mount -t cifs -o username=$NAS_USER,password=$NAS_PASSWORD,uid=$HOST_UID,gid=$HOST_GID,cache=none,file_mode=0664,dir_mode=0755 //$NAS_IP_WIRED/$NAS_SHARE_DIR /mnt/smbshare; then
-    bash $scriptdir/notification.sh "sudo mount Ether"
-elif sudo mount -t cifs -o username=$NAS_USER,password=$NAS_PASSWORD,uid=$HOST_UID,gid=$HOST_GID,cache=none,file_mode=0664,dir_mode=0755 //$NAS_IP/$NAS_SHARE_DIR /mnt/smbshare; then
-    bash $scriptdir/notification.sh "sudo mount wireless"
-else
-    bash $scriptdir/notification.sh "mount failure"
-fi
-
 # Parse options
 while getopts "d:h" opt; do
     case $opt in
@@ -44,6 +35,23 @@ while getopts "d:h" opt; do
             ;;
     esac
 done
+
+
+sudo mkdir -p /mnt/smbshare
+
+success=0
+IFS=',' read -ra items <<< "$NAS_IPS"
+for item in "${items[@]}"; do
+    echo "trying to mount $item"
+    if sudo mount -t cifs -o username=$NAS_USER,password=$NAS_PASSWORD,uid=$HOST_UID,gid=$HOST_GID,cache=none,file_mode=0664,dir_mode=0755 //$item/$NAS_SHARE_DIR /mnt/smbshare; then
+	bash $scriptdir/notification.sh "sudo mount $item"
+	success=1
+	break
+    fi
+done
+if [[ $success -eq 0 ]]; then
+    bash $scriptdir/notification.sh "mount failure"
+fi
 
 # Default to today's date if not specified
 if [ -z "$date" ]; then

@@ -45,8 +45,7 @@ services:
       - HOST_TZ
       - HOST_UID
       - LOGDIR=${LOGDIR:-/log}
-      - NAS_IP
-      - NAS_IP_WIRED
+      - NAS_IPS
       - NAS_PASSWORD
       - NAS_SHARE_DIR
       - NAS_USER
