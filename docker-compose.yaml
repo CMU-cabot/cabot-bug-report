@@ -39,6 +39,7 @@ services:
       - BOX_CLIENT_SECRET
       - BOX_ENTERPRISE_ID
       - BOX_FOLDER_ID
+      - BOX_FOLDER_ID_FOR_DEV
       - GIT_USERNAME
       - GIT_PASSWORD
       - HOST_GID

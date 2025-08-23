@@ -87,8 +87,11 @@ def get_folder_url(folder_id):
     return web_endpoint
 
 @error_handler
-def get_folder_id(elements):
-    folder_id = os.environ.get('BOX_FOLDER_ID')
+def get_folder_id(elements, dev=False):
+    if dev:
+        folder_id = os.environ.get('BOX_FOLDER_ID_FOR_DEV')
+    else:
+        folder_id = os.environ.get('BOX_FOLDER_ID')
     for num in elements:
         if  subfolder_id := check_folder(folder_id, num):
             folder_id = subfolder_id
@@ -129,9 +132,10 @@ if __name__ == "__main__":
     {0} -f <log zip file>                        # show a list of process whose maximum usage is over 50%
     """.format(sys.argv[0]))
 
-    parser.add_option('-f', '--file', type=str, help='bag file to upload')
-    parser.add_option('-s', '--split', type=str, help='bag file to upload')
-    parser.add_option('-p', '--path', type=str, help='bag file to upload')
+    parser.add_option('-f', '--file', type=str, help='specify log file name')
+    parser.add_option('-s', '--split', type=str, help='specify box folder id to avoid calling api multiple times')
+    parser.add_option('-p', '--path', type=str, help='specify path to the log directory')
+    parser.add_option('-d', '--dev', type=str, help='specify root folder name in Box')
 
     (options, args) = parser.parse_args()
 
@@ -142,7 +146,6 @@ if __name__ == "__main__":
     file_name = options.file
     file_path = options.path
 
-
     year = file_name[6:10]
     month = file_name[11:13]
     day = file_name[14:16]
@@ -150,10 +153,16 @@ if __name__ == "__main__":
 
     x = [year, month, day]
     folder_id = ""
+
+    dev=False
+    if options.dev:
+        x.insert(0, options.dev)
+        dev=True
+
     if options.split:
         folder_id = options.split
     else:
-        folder_id = get_folder_id(x)
+        folder_id = get_folder_id(x, dev)
 
     uploaded_file = chunked_upload(folder_id, file_path, file_name)
     sys.stdout.write(get_file_url(uploaded_file.id))

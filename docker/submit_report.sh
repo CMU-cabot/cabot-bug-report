@@ -46,6 +46,7 @@ else
 fi
 
 tar_skip=0
+dev=0
 
 show_help() {
     echo "Usage: $0 [options]"
@@ -90,7 +91,11 @@ upload() {
 
     cd $scriptdir
 
-    output=$(python3 get_folder_url.py -f $item 2>/dev/null)
+    local cmd="python3 get_folder_url.py -f "${item}" 2>/dev/null"
+    if [ $dev -eq 1 ]; then
+        cmd="python3 get_folder_url.py -f "${item}" -d "${CABOT_NAME}" 2>/dev/null"
+    fi
+    output=$(eval "$cmd")
     IFS=',' read -r folder_id folder_url <<< "$output"
     log_name+=($item)
     url+=($folder_url)
@@ -166,7 +171,7 @@ cp_log() {
     done
 }
 
-while getopts "c:u:th" opt; do
+while getopts "c:u:dth" opt; do
     case $opt in
       c)
         cp_log $OPTARG
@@ -179,6 +184,9 @@ while getopts "c:u:th" opt; do
             sudo nmcli con down "$WIFI_SSID" && nmcli con up "$WIFI_SSID"
         fi
         exit
+        ;;
+      d)
+        dev=1
         ;;
       t)
         tar_skip=1
