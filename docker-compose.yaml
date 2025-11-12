@@ -45,7 +45,7 @@ services:
       - HOST_GID
       - HOST_TZ
       - HOST_UID
-      - LOGDIR=${LOGDIR:-/log}
+      - LOGDIR=/log
       - NAS_IPS
       - NAS_PASSWORD
       - NAS_SHARE_DIR
@@ -58,6 +58,8 @@ services:
       - WIFI_DROUTE
       - WIFI_METRIC
       - WIFI_SSID
+      - WIRED_DEV
+      - WIRED_GATEWAY
     privileged: true
 # device, bluetooth
     devices:

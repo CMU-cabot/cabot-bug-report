@@ -12,6 +12,19 @@ rundir=$scriptdir
 ssid=`iwgetid -r`
 can_upload=0
 WIFI_METRIC=50
+used_wifi_connection=0
+
+wifi_connected=0
+if [ -n "$ssid" ] && [ -n "$WIFI_SSID" ] && [ "$ssid" = "$WIFI_SSID" ]; then
+    wifi_connected=1
+fi
+
+wired_connected=0
+if [ -n "$WIRED_DEV" ] && [ -n "$WIRED_GATEWAY" ]; then
+    if ip -4 route show default | grep -F "default via $WIRED_GATEWAY dev $WIRED_DEV" >/dev/null 2>&1; then
+        wired_connected=1
+    fi
+fi
 
 COUNT_FILE="$scriptdir/timer_count"
 if [ ! -f "$COUNT_FILE" ]; then
@@ -21,28 +34,34 @@ fi
 timer_count=$(cat "$COUNT_FILE")
 ((timer_count+=1))
 
-if [ -z "$ssid" ]; then
-    timer_status=$(systemctl --user is-active submit_report.timer)
-    if [ "active" == "$timer_status" ]; then
-        bash $scriptdir/notification.sh "timer起動"$timer_count"回目"
-        echo $timer_count > $COUNT_FILE
-        if [ "$timer_count" -gt 3 ]; then
-            systemctl --user stop submit_report.timer
-            rm $COUNT_FILE
-        fi
-        exit
-    fi
-elif [ $ssid == "$WIFI_SSID" ]; then
+if [ $wifi_connected -eq 1 ]; then
     if [ -n "$WIFI_DROUTE" ]; then
         sudo nmcli con modify "$WIFI_SSID" ipv4.routes "0.0.0.0/0 $WIFI_DROUTE $WIFI_METRIC"
         sudo nmcli con down "$WIFI_SSID" && sudo nmcli con up "$WIFI_SSID"
         sleep 10
     fi
+    used_wifi_connection=1
+    can_upload=1
+elif [ $wired_connected -eq 1 ]; then
     can_upload=1
 else
-    bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
-    systemctl --user stop submit_report.timer
-    rm $COUNT_FILE
+    if [ -z "$ssid" ]; then
+        timer_status=$(systemctl --user is-active submit_report.timer)
+        if [ "active" == "$timer_status" ]; then
+            bash $scriptdir/notification.sh "timer起動"$timer_count"回目"
+            echo $timer_count > $COUNT_FILE
+            if [ "$timer_count" -gt 3 ]; then
+                systemctl --user stop submit_report.timer
+                rm $COUNT_FILE
+            fi
+            exit
+        fi
+    else
+        bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
+        systemctl --user stop submit_report.timer
+        rm $COUNT_FILE
+        exit
+    fi
 fi
 
 tar_skip=0
@@ -179,7 +198,7 @@ while getopts "c:u:dth" opt; do
         ;;
       u)
         upload $OPTARG
-        if [ -n "$WIFI_DROUTE" ]; then
+        if [ -n "$WIFI_DROUTE" ] && [ $used_wifi_connection -eq 1 ]; then
             sudo nmcli con modify "$WIFI_SSID" ipv4.routes ""
             sudo nmcli con down "$WIFI_SSID" && nmcli con up "$WIFI_SSID"
         fi
@@ -366,7 +385,7 @@ elif [ $can_upload -eq 1 ]; then
     bash $scriptdir/notification.sh $CABOT_NAME"の自動アップロードを終了します。"
     systemctl --user stop submit_report.timer
     rm $COUNT_FILE
-    if [ -n "$WIFI_DROUTE" ]; then
+    if [ -n "$WIFI_DROUTE" ] && [ $used_wifi_connection -eq 1 ]; then
         sudo nmcli con modify "$WIFI_SSID" ipv4.routes ""
         sudo nmcli con down "$WIFI_SSID" && sudo nmcli con up "$WIFI_SSID"
     fi

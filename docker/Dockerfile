@@ -18,7 +18,7 @@ RUN apt update && \
 	apt clean && \
 	rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir boxsdk
+RUN python3 -m pip install --no-cache-dir "boxsdk<4"
 RUN pip3 install --no-cache-dir python-dotenv
 
 ARG USERNAME=developer
