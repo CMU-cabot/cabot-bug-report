@@ -58,6 +58,8 @@ services:
       - WIFI_DROUTE
       - WIFI_METRIC
       - WIFI_SSID
+      - WIRED_DEV
+      - WIRED_GATEWAY
     privileged: true
 # device, bluetooth
     devices:
