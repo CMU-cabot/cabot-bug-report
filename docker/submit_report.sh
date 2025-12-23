@@ -60,7 +60,6 @@ else
         bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
         systemctl --user stop submit_report.timer
         rm $COUNT_FILE
-        exit
     fi
 fi
 
