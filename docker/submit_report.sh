@@ -179,7 +179,28 @@ cp_log() {
         fi
 
         select+=($tmp_select)
-        tmp_select=$candump
+        tmp_select="${candump_dir}/${candump}"
+    done
+    select+=($tmp_select)
+
+    plugin_dir=/opt/cabot/log
+    plugin_list=($(ls $plugin_dir | grep $date | sort))
+    tmp_select=""
+    for plugin in ${plugin_list[@]}
+    do
+        i_time=$(echo $plugin | sed -E 's/cabot_plugins_[0-9]{4}-[0-9]{2}-[0-9]{2}-([0-9]{2}-[0-9]{2}-[0-9]{2})/\1/')
+        i_timestamp=$(date -d "${i_time//-/:}" "+%s")
+        if (( timestamp + duration < i_timestamp )); then
+            break
+        fi
+
+        if (( timestamp > i_timestamp )); then
+            tmp_select="${plugin_dir}/${plugin}"
+            continue
+        fi
+
+        select+=($tmp_select)
+        tmp_select="${plugin_dir}/${plugin}"
     done
     select+=($tmp_select)
 

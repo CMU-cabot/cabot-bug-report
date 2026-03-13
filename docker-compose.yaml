@@ -20,6 +20,7 @@ services:
       - /lib/modules:/lib/modules:ro
       - ${LOGDIR:-/opt/cabot/docker/home/.ros/log}:/log
       - /opt/cabot_candump:/opt/cabot_candump
+      - /opt/cabot/log:/opt/cabot/log
       - ${RUNDIR:-.}/content:/home/developer/content
       - ${RUNDIR:-.}/error:/home/developer/error
       - ${RUNDIR:-.}/issue_list.txt:/home/developer/issue_list.txt
