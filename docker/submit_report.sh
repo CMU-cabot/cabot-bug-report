@@ -45,9 +45,9 @@ if [ $wifi_connected -eq 1 ]; then
 elif [ $wired_connected -eq 1 ]; then
     can_upload=1
 else
-    if [ -z "$ssid" ]; then
-        timer_status=$(systemctl --user is-active submit_report.timer)
-        if [ "active" == "$timer_status" ]; then
+    timer_status=$(systemctl --user is-active submit_report.timer)
+    if [ "active" == "$timer_status" ]; then
+        if [ -z "$ssid" ]; then
             bash $scriptdir/notification.sh "timer起動"$timer_count"回目"
             echo $timer_count > $COUNT_FILE
             if [ "$timer_count" -gt 3 ]; then
@@ -55,11 +55,11 @@ else
                 rm $COUNT_FILE
             fi
             exit
+        else
+            bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
+            systemctl --user stop submit_report.timer
+            rm $COUNT_FILE
         fi
-    else
-        bash $scriptdir/notification.sh $CABOT_NAME" M-lab以外接続時にtimerが終了するか確認通知"
-        systemctl --user stop submit_report.timer
-        rm $COUNT_FILE
     fi
 fi
 
