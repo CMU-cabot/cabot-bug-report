@@ -108,7 +108,7 @@ args = parser.parse_args()
 
 title = ""
 body = ""
-dic = dict(zip(args.log_name, args.url))
+links = list(zip(args.log_name, args.url))
 num = args.issue_number
 issue_labels = args.labels
 
@@ -124,11 +124,28 @@ with open(args.title_path, "r") as f:
 with open(args.file_path, "r") as f:
     text = f.read()
     body += text
-    for k,v in dic.items():
-        if v == "None":
-            body += "\n" + k
+
+    attachment_links = []
+    log_links = []
+    for name, url in links:
+        if name.startswith("cabot"):
+            log_links.append((name, url))
         else:
-            body += "\n" + "[{}]({})".format(k, v)
+            attachment_links.append((name, url))
+
+    ordered_links = attachment_links
+    if attachment_links and log_links:
+        ordered_links.append((None, None))
+    ordered_links.extend(log_links)
+
+    for name, url in ordered_links:
+        if name is None:
+            body += "\n"
+            continue
+        if url == "None":
+            body += "\n" + name
+        else:
+            body += "\n" + "[{}]({})".format(name, url)
         
 if num:
     update_issue_body(num, body, issue_labels)

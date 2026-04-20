@@ -13,6 +13,7 @@ ssid=`iwgetid -r`
 can_upload=0
 WIFI_METRIC=50
 used_wifi_connection=0
+upload_folder_id=""
 
 wifi_connected=0
 if [ -n "$ssid" ] && [ -n "$WIFI_SSID" ] && [ "$ssid" = "$WIFI_SSID" ]; then
@@ -79,6 +80,7 @@ upload() {
     # initialize
     log_name=()
     url=()
+    upload_folder_id=""
 
     cd $logdir
     SIZE=`du -d 0 $item | cut -f 1`
@@ -109,12 +111,13 @@ upload() {
 
     cd $scriptdir
 
-    local cmd="python3 get_folder_url.py -f "${item}" 2>/dev/null"
+    local cmd=(python3 get_folder_url.py -f "$item")
     if [ $dev -eq 1 ]; then
-        cmd="python3 get_folder_url.py -f "${item}" -d "${CABOT_NAME}" 2>/dev/null"
+        cmd+=(-d "$CABOT_NAME")
     fi
-    output=$(eval "$cmd")
+    output=$("${cmd[@]}" 2>/dev/null)
     IFS=',' read -r folder_id folder_url <<< "$output"
+    upload_folder_id=$folder_id
     log_name+=($item)
     url+=($folder_url)
 
@@ -123,17 +126,77 @@ upload() {
         echo start uploading $upload_item
         bash $scriptdir/notification.sh "start uploading ${upload_item}"
         echo folder_id = $folder_id
-        python3 upload.py -f $upload_item -s $folder_id -p $logdir > stdout.log 2> stderr.log
+        python3 upload.py -f "$upload_item" -s "$folder_id" -p "$logdir" > stdout.log 2> stderr.log
         if [ $? -eq 1 ]; then
             python3 notice_error.py log -e "$(cat stderr.log)" -u "$upload_item"
             url+=("None")
             all_upload=0
         else
-            url+=($(cat stdout.log | tail -n 1))
+            url+=("$(tail -n 1 stdout.log)")
         fi
         
-        log_name+=($upload_item)
+        log_name+=("$upload_item")
     done
+}
+
+upload_attachments() {
+    local item=$1
+    local attachment_dir="$logdir/$item/mobile_attachments"
+    local manifest_path="$attachment_dir/manifest.json"
+    local folder_id="$upload_folder_id"
+
+    if [ ! -f "$manifest_path" ]; then
+        return
+    fi
+
+    if [ -z "$folder_id" ]; then
+        local cmd=(python3 get_folder_url.py -f "$item")
+        if [ $dev -eq 1 ]; then
+            cmd+=(-d "$CABOT_NAME")
+        fi
+        output=$("${cmd[@]}" 2>/dev/null)
+        IFS=',' read -r folder_id folder_url <<< "$output"
+    fi
+
+    while IFS=$'\t' read -r file_name original_name
+    do
+        if [ -z "$file_name" ]; then
+            continue
+        fi
+
+        echo start uploading $file_name
+        bash $scriptdir/notification.sh "start uploading ${file_name}"
+        python3 upload.py --image -f "$file_name" -s "$folder_id" -p "$attachment_dir" > stdout.log 2> stderr.log
+        if [ $? -eq 1 ]; then
+            python3 notice_error.py log -e "$(cat stderr.log)" -u "$file_name"
+            url+=("None")
+            all_upload=0
+        else
+            file_id=$(tail -n 1 stdout.log)
+            url+=("https://app.box.com/file/$file_id")
+        fi
+
+        log_name+=("$original_name")
+    done < <(
+        python3 - "$manifest_path" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r") as manifest_file:
+    manifest = json.load(manifest_file)
+
+attachments = sorted(
+    manifest.get("attachments", []),
+    key=lambda attachment: (int(attachment.get("order", 0)), attachment.get("file_name", ""))
+)
+
+for attachment in attachments:
+    file_name = str(attachment.get("file_name", "")).strip()
+    original_name = str(attachment.get("original_name", file_name))
+    if file_name:
+        print(f"{file_name}\t{original_name}")
+PY
+    )
 }
 
 cp_log() {
@@ -317,6 +380,7 @@ do
                 bash $scriptdir/notification.sh $CABOT_NAME"の${item}のアップロードを開始します。"
                 cp_log $item
                 upload $item
+                upload_attachments $item
             done
             ((notification+=$all_upload))
         fi
@@ -355,7 +419,7 @@ do
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
             issue_num=${BASH_REMATCH[1]}
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -i $issue_num -L ${label[@]} > stdout.log 2> stderr.log
+            python3 make_issue.py -t "$title_path" -f "$file_path" -u "${url[@]}" -l "${log_name[@]}" -i "$issue_num" -L "${label[@]}" > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)
@@ -365,7 +429,7 @@ do
                 response=$(cat stdout.log)
             fi
         else
-            python3 make_issue.py -t $title_path -f $file_path -u ${url[@]} -l ${log_name[@]} -L ${label[@]} > stdout.log 2> stderr.log
+            python3 make_issue.py -t "$title_path" -f "$file_path" -u "${url[@]}" -l "${log_name[@]}" -L "${label[@]}" > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)
