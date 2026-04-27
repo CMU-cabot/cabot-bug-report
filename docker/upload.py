@@ -12,6 +12,15 @@ from dotenv import load_dotenv
 load_dotenv()
 import re
 
+RETURN_IMAGE_ID = False
+
+
+def format_upload_result(file_id):
+    if RETURN_IMAGE_ID:
+        return str(file_id)
+    return get_file_url(file_id)
+
+
 def error_handler(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -25,14 +34,13 @@ def error_handler(func):
             # status属性を持つかどうか確認し、持っていれば処理
             if hasattr(e, 'status') and e.status == 409:
                 file_id = e.context_info["conflicts"]["id"]
-                file_url = get_file_url(file_id)
                 if func.__name__ == "chunked_upload":
                     file_info = client.file(file_id).get()
                     file_path=args[1]
                     file_name=args[2]
                     if file_info["size"] != os.path.getsize(file_path):
                         update_contents(file_id, file_path, file_name)
-                sys.stdout.write(file_url)
+                sys.stdout.write(format_upload_result(file_id))
                 sys.exit(0)
             else:
                 # status属性がない場合や、他のエラーの場合の処理
@@ -136,6 +144,7 @@ if __name__ == "__main__":
     parser.add_option('-s', '--split', type=str, help='specify box folder id to avoid calling api multiple times')
     parser.add_option('-p', '--path', type=str, help='specify path to the log directory')
     parser.add_option('-d', '--dev', type=str, help='specify root folder name in Box')
+    parser.add_option('-i', '--image', action='store_true', help='return uploaded file id instead of shared link')
 
     (options, args) = parser.parse_args()
 
@@ -145,6 +154,7 @@ if __name__ == "__main__":
 
     file_name = options.file
     file_path = options.path
+    RETURN_IMAGE_ID = bool(options.image)
 
     year = file_name[6:10]
     month = file_name[11:13]
@@ -165,4 +175,4 @@ if __name__ == "__main__":
         folder_id = get_folder_id(x, dev)
 
     uploaded_file = chunked_upload(folder_id, file_path, file_name)
-    sys.stdout.write(get_file_url(uploaded_file.id))
+    sys.stdout.write(format_upload_result(uploaded_file.id))
