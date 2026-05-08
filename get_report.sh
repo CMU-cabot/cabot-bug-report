@@ -10,7 +10,7 @@ if [[ -z $1 ]]; then
     exit
 fi
 log=$1
-line=$(grep $log $list)
+line=$(grep "$log" "$list" | grep -v 'SOURCE=webui' | head -n 1)
 if [[ -z $line ]]; then
     exit
 fi

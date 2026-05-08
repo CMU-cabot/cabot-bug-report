@@ -17,8 +17,9 @@ set -e
 
 log=$3
 
-if [[ $(grep $log $list | wc -l) -eq 1 ]]; then
-    line=$(grep $log $list)
+existing_line=$(grep "$log" "$list" | grep -v 'SOURCE=webui' || true)
+if [[ $(echo "$existing_line" | awk 'NF' | wc -l) -eq 1 ]]; then
+    line=$existing_line
     title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
     title_path=$scriptdir/content/$title_file_name
@@ -37,4 +38,3 @@ else
     echo -e "$2" > $scriptdir/content/$body_file_name
     echo $issue_list >> $list
 fi
-
