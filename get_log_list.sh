@@ -17,8 +17,9 @@ logs=($(ls -d cabot*/ | tail -$num | sed "s'/''" ))
 
 for log in ${logs[@]}
 do
-    is_report_submitted=$(grep $log $list | wc -l)
-    is_uploaded_to_box=$(grep $log $list | grep UPLOADED | wc -l)
+    matched_lines=$(grep "$log" "$list" | grep -v 'SOURCE=webui' || true)
+    is_report_submitted=$(echo "$matched_lines" | awk 'NF' | wc -l)
+    is_uploaded_to_box=$(echo "$matched_lines" | grep UPLOADED | wc -l)
     nanoseconds=$(bash $scriptdir/get_duration.sh $log)
     echo "$log,$is_report_submitted,$is_uploaded_to_box,$nanoseconds"
 done

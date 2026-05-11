@@ -15,6 +15,40 @@ WIFI_METRIC=50
 used_wifi_connection=0
 upload_folder_id=""
 
+log_skip_upload() {
+    local target_log="$1"
+    local reason="$2"
+
+    if [ -n "$target_log" ]; then
+        echo "skip upload for ${target_log}: ${reason}"
+    else
+        echo "skip upload: ${reason}"
+    fi
+}
+
+required_upload_network() {
+    local wifi_label=""
+    local wired_label=""
+
+    if [ -n "$WIFI_SSID" ]; then
+        wifi_label="connect \"$WIFI_SSID\""
+    fi
+
+    if [ -n "$WIRED_DEV" ] && [ -n "$WIRED_GATEWAY" ]; then
+        wired_label="connect wired \"$WIRED_DEV via $WIRED_GATEWAY\""
+    fi
+
+    if [ -n "$wifi_label" ] && [ -n "$wired_label" ]; then
+        echo "$wifi_label or $wired_label"
+    elif [ -n "$wifi_label" ]; then
+        echo "$wifi_label"
+    elif [ -n "$wired_label" ]; then
+        echo "$wired_label"
+    else
+        echo "connect the configured upload network"
+    fi
+}
+
 wifi_connected=0
 if [ -n "$ssid" ] && [ -n "$WIFI_SSID" ] && [ "$ssid" = "$WIFI_SSID" ]; then
     wifi_connected=1
@@ -62,6 +96,7 @@ else
             rm $COUNT_FILE
         fi
     fi
+    log_skip_upload "" "no upload network available; $(required_upload_network)"
 fi
 
 tar_skip=0
@@ -73,6 +108,51 @@ show_help() {
     echo "  -u <item>   Upload the specified item."
     echo "  -t          Skip tar creation and use existing tar files."
     echo "  -h          Show this help message."
+}
+
+issue_list_append_tag() {
+    local source_type="$1"
+    local report_id="$2"
+    local target_log="$3"
+    local tag="$4"
+    local tmp_file=$(mktemp)
+
+    awk -F',' -v source_type="$source_type" -v report_id="$report_id" -v target_log="$target_log" -v tag="$tag" '
+        function is_webui(line) {
+            return index(line, "SOURCE=webui") > 0
+        }
+        function matches(line) {
+            split(line, fields, ",")
+            if (source_type == "webui") {
+                return report_id != "" && index(line, "REPORT_ID=" report_id) > 0
+            }
+            return fields[3] == target_log && !is_webui(line)
+        }
+        function tag_key(value) {
+            return index(value, "=") > 0 ? substr(value, 1, index(value, "=")) : value
+        }
+        {
+            if (matches($0)) {
+                count = split($0, fields, ",")
+                prefix = tag_key(tag)
+                line = fields[1]
+                for (i = 2; i <= count; i++) {
+                    if (prefix != tag) {
+                        if (index(fields[i], prefix) == 1) {
+                            continue
+                        }
+                    } else if (fields[i] == tag) {
+                        continue
+                    }
+                    line = line "," fields[i]
+                }
+                $0 = line "," tag
+            }
+            print
+        }
+    ' "$rundir/issue_list.txt" > "$tmp_file" \
+        && cp "$tmp_file" "$rundir/issue_list.txt" \
+        && rm "$tmp_file"
 }
 
 upload() {
@@ -142,6 +222,67 @@ upload() {
 upload_attachments() {
     local item=$1
     local attachment_dir="$logdir/$item/mobile_attachments"
+    local manifest_path="$attachment_dir/manifest.json"
+    local folder_id="$upload_folder_id"
+
+    if [ ! -f "$manifest_path" ]; then
+        return
+    fi
+
+    if [ -z "$folder_id" ]; then
+        local cmd=(python3 get_folder_url.py -f "$item")
+        if [ $dev -eq 1 ]; then
+            cmd+=(-d "$CABOT_NAME")
+        fi
+        output=$("${cmd[@]}" 2>/dev/null)
+        IFS=',' read -r folder_id folder_url <<< "$output"
+    fi
+
+    while IFS=$'\t' read -r file_name original_name
+    do
+        if [ -z "$file_name" ]; then
+            continue
+        fi
+
+        echo start uploading $file_name
+        bash $scriptdir/notification.sh "start uploading ${file_name}"
+        python3 upload.py --image -f "$file_name" -s "$folder_id" -p "$attachment_dir" > stdout.log 2> stderr.log
+        if [ $? -eq 1 ]; then
+            python3 notice_error.py log -e "$(cat stderr.log)" -u "$file_name"
+            url+=("None")
+            all_upload=0
+        else
+            file_id=$(tail -n 1 stdout.log)
+            url+=("https://app.box.com/file/$file_id")
+        fi
+
+        log_name+=("$original_name")
+    done < <(
+        python3 - "$manifest_path" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r") as manifest_file:
+    manifest = json.load(manifest_file)
+
+attachments = sorted(
+    manifest.get("attachments", []),
+    key=lambda attachment: (int(attachment.get("order", 0)), attachment.get("file_name", ""))
+)
+
+for attachment in attachments:
+    file_name = str(attachment.get("file_name", "")).strip()
+    original_name = str(attachment.get("original_name", file_name))
+    if file_name:
+        print(f"{file_name}\t{original_name}")
+PY
+    )
+}
+
+upload_webui_attachments() {
+    local item=$1
+    local report_id=$2
+    local attachment_dir="$logdir/$item/webui_reports/$report_id"
     local manifest_path="$attachment_dir/manifest.json"
     local folder_id="$upload_folder_id"
 
@@ -315,10 +456,23 @@ do
     title_file_name=`echo $line | cut -d ',' -f 1`
     body_file_name=`echo $line | cut -d ',' -f 2`
     log=`echo $line | cut -d ',' -f 3`
+    source_type="app"
+    report_id=""
+    if [[ "$line" =~ SOURCE=([^,]+) ]]; then
+        source_type=${BASH_REMATCH[1]}
+    fi
+    if [[ "$line" =~ REPORT_ID=([^,]+) ]]; then
+        report_id=${BASH_REMATCH[1]}
+    fi
+    if [[ "$source_type" == "webui" && -z "$report_id" ]]; then
+        log_skip_upload "$log" "invalid webui issue line: missing REPORT_ID"
+        continue
+    fi
     if [[ "$line" =~ cabot_([0-9]{4}-[0-9]{2}-[0-9]{2}) ]]; then
         target_date=${BASH_REMATCH[1]}
         target_time=$(TZ=Asia/Tokyo date -d "$target_date 00:00:00" +%s)
         if (( today - target_time > retention_period )); then
+            log_skip_upload "$log" "issue entry expired by retention policy; removing from issue_list"
             sed "\|^$line\$|d" $rundir/issue_list.txt > tmp_file \
                 && cp tmp_file $rundir/issue_list.txt \
                 && rm tmp_file
@@ -365,11 +519,13 @@ do
             done
 
             if [ "$state" = "closed" ]; then
+                log_skip_upload "$log" "issue #$num is already closed"
                 continue
             fi
         fi
 
-        if [ ! `awk 'NF' $title_path` ]; then
+        if ! grep -q '[^[:space:]]' "$title_path"; then
+            log_skip_upload "$log" "title file is empty: $title_path"
             continue
         fi
 
@@ -380,9 +536,15 @@ do
                 bash $scriptdir/notification.sh $CABOT_NAME"の${item}のアップロードを開始します。"
                 cp_log $item
                 upload $item
-                upload_attachments $item
+                if [[ "$source_type" == "webui" ]]; then
+                    upload_webui_attachments "$item" "$report_id"
+                else
+                    upload_attachments "$item"
+                fi
             done
             ((notification+=$all_upload))
+        else
+            log_skip_upload "$log" "upload is disabled because no allowed network route is active"
         fi
 
         if [[ $all_upload -eq 0 ]]; then
@@ -400,9 +562,7 @@ do
         else
             cabot_launch_image_tag=$(grep '^CABOT_LAUNCH_IMAGE_TAG=' $logdir/$log/env-file | awk -F= '{print $2}')
             label+=($cabot_launch_image_tag)
-            sed "s/\(.*$log\)/\1,CABOT_LAUNCH_IMAGE_TAG=$cabot_launch_image_tag/" $rundir/issue_list.txt > tmp_file \
-                && cp tmp_file $rundir/issue_list.txt \
-                && rm tmp_file
+            issue_list_append_tag "$source_type" "$report_id" "$log" "CABOT_LAUNCH_IMAGE_TAG=$cabot_launch_image_tag"
         fi
 
         if [[ "$line" =~ CABOT_SITE_VERSION=([^,]+) ]]; then
@@ -410,9 +570,7 @@ do
         else
             cabot_site_version=$(grep '^CABOT_SITE_VERSION=' $logdir/$log/env-file | awk -F= '{print $2}')
             label+=($cabot_site_version)
-            sed "s/\(.*$log\)/\1,CABOT_SITE_VERSION=$cabot_site_version/" $rundir/issue_list.txt > tmp_file \
-                && cp tmp_file $rundir/issue_list.txt \
-                && rm tmp_file
+            issue_list_append_tag "$source_type" "$report_id" "$log" "CABOT_SITE_VERSION=$cabot_site_version"
         fi
 
         make_issue=1
@@ -438,9 +596,7 @@ do
             else
                 response=$(cat stdout.log)
                 issue_num=$(cat stdout.log | tail -n 1)
-                sed "s/\(.*$log\)/\1,REPORTED=$issue_num/" $rundir/issue_list.txt > tmp_file \
-                  && cp tmp_file $rundir/issue_list.txt \
-                  && rm tmp_file
+                issue_list_append_tag "$source_type" "$report_id" "$log" "REPORTED=$issue_num"
             fi
         fi
 
@@ -449,9 +605,7 @@ do
 
         if [ $notification -eq 2 ]; then
             if [[ $all_upload -eq 1 && "$line" != *ALL_UPLOAD* ]]; then
-                sed "s/\(.*$log\)/\1,ALL_UPLOAD/" $rundir/issue_list.txt > tmp_file \
-                  && cp tmp_file $rundir/issue_list.txt \
-                  && rm tmp_file
+                issue_list_append_tag "$source_type" "$report_id" "$log" "ALL_UPLOAD"
             fi
             bash $scriptdir/notification.sh $CABOT_NAME"の${log}のアップロードが終了しました。\nhttps://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${issue_num}"
         elif [ $can_upload -eq 1 ]; then
