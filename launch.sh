@@ -7,12 +7,14 @@ stop_launch() {
 
 trap 'stop_launch' SIGINT SIGTERM
 
-pwd=`pwd`
 scriptdir=`dirname $0`
 cd $scriptdir
 scriptdir=`pwd`
 
 source $scriptdir/.env
 
-docker compose up
-
+if [ $# -gt 0 ]; then
+    docker compose run --rm bug-report ./submit_report.sh "$@"
+else
+    docker compose up
+fi
