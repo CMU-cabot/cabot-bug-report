@@ -25,6 +25,7 @@ services:
       - ${RUNDIR:-.}/error:/home/developer/error
       - ${RUNDIR:-.}/issue_list.txt:/home/developer/issue_list.txt
       - ./get_duration.sh:/home/developer/get_duration.sh
+      - ${CABOT_SSH_ID_FILE:-./please-specify-ssh-id-file}:/home/developer/.ssh/ssh_key_cabot:ro
 # for systemctl
       - /run/systemd/system:/run/systemd/system
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -43,7 +44,11 @@ services:
       - BOX_FOLDER_ID_FOR_DEV
       - GIT_USERNAME
       - GIT_PASSWORD
+      - CABOT_HOST_USER=${CABOT_HOST_USER:-cabot}
+      - CABOT_SSH_ID_FILE=/home/developer/.ssh/ssh_key_cabot
       - HOST_GID
+      - HOST_FIX_BAG_SCRIPT=/opt/cabot/tools/fix_bag.sh
+      - HOST_LOGDIR=${LOGDIR:-/opt/cabot/docker/home/.ros/log}
       - HOST_TZ
       - HOST_UID
       - LOGDIR=/log

@@ -25,6 +25,143 @@ rsync_error_msg() {
   esac
 }
 
+create_ros2_topics_archives() {
+    local item="$1"
+    local archive_mode="$2"
+    local source_bag_dir="$logdir/$item/ros2_topics"
+    local host_logdir="${HOST_LOGDIR:-/opt/cabot/docker/home/.ros/log}"
+    local host_user="${CABOT_HOST_USER:-${USER:-cabot}}"
+    local ssh_id_file="${CABOT_SSH_ID_FILE:-/home/developer/.ssh/ssh_key_cabot}"
+    local host_fix_bag_script="${HOST_FIX_BAG_SCRIPT:-/opt/cabot/tools/fix_bag.sh}"
+    local needs_filter=0
+
+    if python3 - "$source_bag_dir" <<'PY'
+from pathlib import Path
+import sqlite3
+import sys
+
+bag_dir = Path(sys.argv[1])
+for db_path in sorted(bag_dir.glob("*.db3")):
+    conn = sqlite3.connect(str(db_path))
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM topics WHERE name LIKE '%image_raw/compressed%' LIMIT 1"
+        ).fetchone()
+    finally:
+        conn.close()
+    if row is not None:
+        raise SystemExit(0)
+raise SystemExit(1)
+PY
+    then
+        needs_filter=1
+    fi
+
+    if [[ $needs_filter -eq 0 ]]; then
+        if [[ "$archive_mode" == "split" ]]; then
+            PARTS=(${item}_ros2_topics_part_*)
+            if [ ! -e "${PARTS[0]}" ]; then
+                tar -cvf - "$item/ros2_topics" 1>&2 | split -b 10G - "${item}_ros2_topics_part_"
+            fi
+            ls | grep "${item}_ros2_topics_part_"
+        else
+            FILE2="${item}_ros2_topics.tar"
+            if [ ! -e "$FILE2" ]; then
+                tar -cvf "$FILE2" "$item/ros2_topics" 1>&2
+            fi
+            echo "$FILE2"
+        fi
+        return
+    fi
+
+    if [[ ! -f "$ssh_id_file" ]]; then
+        echo "ssh identity file was not found: $ssh_id_file" >&2
+        return 1
+    fi
+
+    local stage_root
+    stage_root=$(mktemp -d "$logdir/.upload_ros2_topics_${item}.XXXXXX")
+    local stage_rel=${stage_root#"$logdir"/}
+    local host_stage_bag_dir="$host_logdir/$stage_rel/$item/ros2_topics"
+
+    mkdir -p "$stage_root/$item" || {
+        rm -rf "$stage_root"
+        return 1
+    }
+    cp -a "$source_bag_dir" "$stage_root/$item/" || {
+        rm -rf "$stage_root"
+        return 1
+    }
+
+    if ! python3 - "$stage_root/$item/ros2_topics" <<'PY'
+from pathlib import Path
+import sqlite3
+import sys
+
+bag_dir = Path(sys.argv[1])
+db_paths = sorted(bag_dir.glob("*.db3"))
+if not db_paths:
+    raise SystemExit(f"no db3 files were found in {bag_dir}")
+
+for db_path in db_paths:
+    conn = sqlite3.connect(str(db_path))
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute(
+            """
+DELETE FROM messages
+  WHERE topic_id IN (
+    SELECT id FROM topics WHERE name LIKE '%image_raw/compressed%'
+  )
+"""
+        )
+        conn.execute("DELETE FROM topics WHERE name LIKE '%image_raw/compressed%'")
+        conn.commit()
+        conn.execute("VACUUM")
+    finally:
+        conn.close()
+PY
+    then
+        rm -rf "$stage_root"
+        return 1
+    fi
+
+    rm -f "$stage_root/$item/ros2_topics/metadata.yaml" || {
+        rm -rf "$stage_root"
+        return 1
+    }
+    printf -v remote_command 'bash %q -f %q' "$host_fix_bag_script" "$host_stage_bag_dir"
+    if ! ssh \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -i "$ssh_id_file" \
+        "$host_user@localhost" \
+        "$remote_command" 1>&2; then
+        rm -rf "$stage_root"
+        return 1
+    fi
+
+    rm -f "${item}_ros2_topics.tar"
+    rm -f "${item}"_ros2_topics_part_*
+
+    if [[ "$archive_mode" == "split" ]]; then
+        tar -C "$stage_root" -cvf - "$item/ros2_topics" 1>&2 | split -b 10G - "${item}_ros2_topics_part_" || {
+            rm -rf "$stage_root"
+            return 1
+        }
+        rm -rf "$stage_root"
+        ls | grep "${item}_ros2_topics_part_"
+    else
+        FILE2="${item}_ros2_topics.tar"
+        tar -C "$stage_root" -cvf "$FILE2" "$item/ros2_topics" 1>&2 || {
+            rm -rf "$stage_root"
+            return 1
+        }
+        rm -rf "$stage_root"
+        echo "$FILE2"
+    fi
+}
+
 pwd=`pwd`
 scriptdir=`dirname $0`
 cd $scriptdir
@@ -93,19 +230,22 @@ do
         tar --exclude="ros2_topics" --exclude="image_topics" -cvf $FILE1 $item
     fi
     tars=($FILE1)
+    ros2_tars=()
     if [ $SIZE -gt 13000000 ]; then
-        PARTS=($(ls $logdir | grep ${item}_ros2_topics_part_))
-        if [ ! -e "${PARTS[0]}" ]; then
-            tar -cvf - $item/ros2_topics | split -b 10G - ${item}_ros2_topics_part_
-        fi
-        tars+=(`ls | grep ${item}_ros2_topics_part_`)
+        archive_mode=split
     else
-        FILE2="${item}_ros2_topics.tar"
-        if [ ! -e $FILE2 ]; then
-            tar -cvf $FILE2 $item/ros2_topics
-        fi
-        tars+=($FILE2)
+        archive_mode=single
     fi
+    helper_stderr=$(mktemp)
+    if ! ros2_tar_output=$(create_ros2_topics_archives "$item" "$archive_mode" 2> "$helper_stderr"); then
+        echo "failed to create filtered ros2_topics archive for $item"
+        cat "$helper_stderr"
+        rm -f "$helper_stderr"
+        continue
+    fi
+    rm -f "$helper_stderr"
+    ros2_tars=($ros2_tar_output)
+    tars+=("${ros2_tars[@]}")
     echo ${tars[@]}
     echo rsync start
     bash $scriptdir/notification.sh "uploading ${tars[*]}"
