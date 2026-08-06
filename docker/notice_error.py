@@ -36,6 +36,7 @@ def make_github_issue(title, body=None):
 parser = argparse.ArgumentParser(description='Make github issue with Error Log.')
 parser.add_argument('run', type=str, choices=['log', 'issue'])
 parser.add_argument('-e', '--error_message', action='store')
+parser.add_argument('--error-file', dest='error_file', action='store')
 parser.add_argument('-u', '--upload_file', action='store')
 parser.add_argument('-i', '--issue_contents', action='store')
 
@@ -49,7 +50,13 @@ if args.run == "log":
 elif args.run == "issue":
     text += "making issue ({})".format(args.issue_contents)
 
+error_message = args.error_message or ""
+if args.error_file:
+    with open(args.error_file, "rb") as error_file:
+        error_message = error_file.read().decode("utf-8", errors="replace")
+    error_message = error_message.replace("\x00", "")
+    error_message = error_message[-20000:]
 
-body = text + "\n" + args.error_message
+body = text + "\n" + error_message
 
 make_github_issue(title, body)

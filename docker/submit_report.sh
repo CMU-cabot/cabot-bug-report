@@ -191,7 +191,7 @@ PY
         if [[ "$archive_mode" == "split" ]]; then
             PARTS=(${item}_ros2_topics_part_*)
             if [ ! -e "${PARTS[0]}" ]; then
-                tar -cvf - "$item/ros2_topics" 1>&2 | split -b 10G - "${item}_ros2_topics_part_"
+                tar -cvf - "$item/ros2_topics" | split -b 10G - "${item}_ros2_topics_part_"
             fi
             ls | grep "${item}_ros2_topics_part_"
         else
@@ -275,7 +275,7 @@ PY
     rm -f "${item}"_ros2_topics_part_*
 
     if [[ "$archive_mode" == "split" ]]; then
-        tar -C "$stage_root" -cvf - "$item/ros2_topics" 1>&2 | split -b 10G - "${item}_ros2_topics_part_" || {
+        tar -C "$stage_root" -cvf - "$item/ros2_topics" | split -b 10G - "${item}_ros2_topics_part_" || {
             rm -rf "$stage_root"
             return 1
         }
@@ -318,7 +318,7 @@ upload() {
         fi
         helper_stderr=$(mktemp)
         if ! ros2_tar_output=$(create_ros2_topics_archives "$item" "$archive_mode" 2> "$helper_stderr"); then
-            python3 "$scriptdir/notice_error.py" log -e "$(cat "$helper_stderr")" -u "${item}/ros2_topics"
+            python3 "$scriptdir/notice_error.py" log --error-file "$helper_stderr" -u "${item}/ros2_topics"
             rm -f "$helper_stderr"
             all_upload=0
             return

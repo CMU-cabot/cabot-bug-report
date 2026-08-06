@@ -61,7 +61,7 @@ PY
         if [[ "$archive_mode" == "split" ]]; then
             PARTS=(${item}_ros2_topics_part_*)
             if [ ! -e "${PARTS[0]}" ]; then
-                tar -cvf - "$item/ros2_topics" 1>&2 | split -b 10G - "${item}_ros2_topics_part_"
+                tar -cvf - "$item/ros2_topics" | split -b 10G - "${item}_ros2_topics_part_"
             fi
             ls | grep "${item}_ros2_topics_part_"
         else
@@ -145,7 +145,7 @@ PY
     rm -f "${item}"_ros2_topics_part_*
 
     if [[ "$archive_mode" == "split" ]]; then
-        tar -C "$stage_root" -cvf - "$item/ros2_topics" 1>&2 | split -b 10G - "${item}_ros2_topics_part_" || {
+        tar -C "$stage_root" -cvf - "$item/ros2_topics" | split -b 10G - "${item}_ros2_topics_part_" || {
             rm -rf "$stage_root"
             return 1
         }
