@@ -247,7 +247,6 @@ DELETE FROM messages
         )
         conn.execute("DELETE FROM topics WHERE name LIKE '%image_raw/compressed%'")
         conn.commit()
-        conn.execute("VACUUM")
     finally:
         conn.close()
 PY
@@ -261,7 +260,7 @@ PY
         return 1
     }
     printf -v remote_command 'bash %q -f %q' "$host_fix_bag_script" "$host_stage_bag_dir"
-    if ! ssh \
+    if ! ssh -n \
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
         -i "$ssh_id_file" \
