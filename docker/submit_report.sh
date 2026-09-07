@@ -320,6 +320,7 @@ upload() {
             python3 "$scriptdir/notice_error.py" log --error-file "$helper_stderr" -u "${item}/ros2_topics"
             rm -f "$helper_stderr"
             all_upload=0
+            cd "$scriptdir"
             return
         fi
         rm -f "$helper_stderr"
@@ -336,9 +337,14 @@ upload() {
     fi
     output=$("${cmd[@]}" 2>/dev/null)
     IFS=',' read -r folder_id folder_url <<< "$output"
-    upload_folder_id=$folder_id
-    log_name+=($item)
-    url+=($folder_url)
+    log_name+=("$item")
+    if [[ -n "$folder_id" && -n "$folder_url" ]]; then
+        upload_folder_id="$folder_id"
+        url+=("$folder_url")
+    else
+        url+=("None")
+        all_upload=0
+    fi
 
     for upload_item in "${tars[@]}"
     do
@@ -346,7 +352,7 @@ upload() {
         bash $scriptdir/notification.sh "start uploading ${upload_item}"
         echo folder_id = $folder_id
         python3 upload.py -f "$upload_item" -s "$folder_id" -p "$logdir" > stdout.log 2> stderr.log
-        if [ $? -eq 1 ]; then
+        if [ $? -ne 0 ]; then
             python3 notice_error.py log -e "$(cat stderr.log)" -u "$upload_item"
             url+=("None")
             all_upload=0
@@ -386,7 +392,7 @@ upload_attachments() {
         echo start uploading $file_name
         bash $scriptdir/notification.sh "start uploading ${file_name}"
         python3 upload.py --image -f "$file_name" -s "$folder_id" -p "$attachment_dir" > stdout.log 2> stderr.log
-        if [ $? -eq 1 ]; then
+        if [ $? -ne 0 ]; then
             python3 notice_error.py log -e "$(cat stderr.log)" -u "$file_name"
             url+=("None")
             all_upload=0
@@ -447,7 +453,7 @@ upload_webui_attachments() {
         echo start uploading $file_name
         bash $scriptdir/notification.sh "start uploading ${file_name}"
         python3 upload.py --image -f "$file_name" -s "$folder_id" -p "$attachment_dir" > stdout.log 2> stderr.log
-        if [ $? -eq 1 ]; then
+        if [ $? -ne 0 ]; then
             python3 notice_error.py log -e "$(cat stderr.log)" -u "$file_name"
             url+=("None")
             all_upload=0
@@ -634,10 +640,34 @@ do
         label=()
         label+=($CABOT_NAME)
         target="未アップロード"
+        issue_num=""
+        report_key=""
+        report_key_was_present=0
+
+        if [[ "$line" =~ REPORT_KEY=([^,]+) ]]; then
+            report_key=${BASH_REMATCH[1]}
+            report_key_was_present=1
+        elif [[ "$line" != *REPORTED=* ]]; then
+            report_key=$(python3 -c 'import uuid; print(uuid.uuid4())')
+            issue_list_append_tag "$source_type" "$report_id" "$log" "REPORT_KEY=$report_key"
+        fi
 
         if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
-            num=${BASH_REMATCH[1]}
-            read -r state labels_csv log_name_csv url_csv < <(python3 make_issue.py -c -i "$num")
+            issue_num=${BASH_REMATCH[1]}
+        elif [[ $report_key_was_present -eq 1 ]]; then
+            recovered_issue_num=$(python3 make_issue.py --search_report_key "$report_key")
+            search_status=$?
+            if [[ $search_status -eq 0 && "$recovered_issue_num" =~ ^[0-9]+$ ]]; then
+                issue_num=$recovered_issue_num
+                issue_list_append_tag "$source_type" "$report_id" "$log" "REPORTED=$issue_num"
+            elif [[ $search_status -ne 2 ]]; then
+                log_skip_upload "$log" "failed to search GitHub issue for REPORT_KEY=$report_key"
+                continue
+            fi
+        fi
+
+        if [[ -n "$issue_num" ]]; then
+            read -r state labels_csv log_name_csv url_csv < <(python3 make_issue.py -c -i "$issue_num")
             IFS=',' read -r -a labels <<< "$labels_csv"
             IFS=',' read -r -a log_names <<< "$log_name_csv"
             IFS=',' read -r -a urls <<< "$url_csv"
@@ -658,7 +688,7 @@ do
             done
 
             if [ "$state" = "closed" ]; then
-                log_skip_upload "$log" "issue #$num is already closed"
+                log_skip_upload "$log" "issue #$issue_num is already closed"
                 continue
             fi
         fi
@@ -713,10 +743,18 @@ do
         fi
 
         make_issue=1
+        issue_args=(-t "$title_path" -f "$file_path" -u "${url[@]}" -l "${log_name[@]}" -L "${label[@]}")
+        if [[ -n "$report_key" ]]; then
+            issue_args+=(-k "$report_key")
+        fi
 
-        if [[ "$line" =~ REPORTED=([0-9]+) ]]; then
-            issue_num=${BASH_REMATCH[1]}
-            python3 make_issue.py -t "$title_path" -f "$file_path" -u "${url[@]}" -l "${log_name[@]}" -i "$issue_num" -L "${label[@]}" > stdout.log 2> stderr.log
+        if [[ ${#log_name[@]} -ne ${#url[@]} ]]; then
+            response="link entry count mismatch: names=${#log_name[@]}, urls=${#url[@]}"
+            echo "$response" > stderr.log
+            python3 notice_error.py issue -e "$response" -i "$line"
+            make_issue=0
+        elif [[ -n "$issue_num" ]]; then
+            python3 make_issue.py "${issue_args[@]}" -i "$issue_num" > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)
@@ -726,7 +764,7 @@ do
                 response=$(cat stdout.log)
             fi
         else
-            python3 make_issue.py -t "$title_path" -f "$file_path" -u "${url[@]}" -l "${log_name[@]}" -L "${label[@]}" > stdout.log 2> stderr.log
+            python3 make_issue.py "${issue_args[@]}" > stdout.log 2> stderr.log
 
             if [ $? -ne 0 ]; then
                 response=$(cat stderr.log)

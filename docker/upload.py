@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import traceback
 from functools import wraps
 from typing import Any
@@ -13,6 +14,8 @@ load_dotenv()
 import re
 
 RETURN_IMAGE_ID = False
+BOX_API_ATTEMPTS = 3
+BOX_API_RETRY_DELAY = 1
 
 
 def format_upload_result(file_id):
@@ -72,12 +75,19 @@ client = Client(auth, session=custom_session)
 
 @error_handler
 def check_folder(folder_id, check_name):
-    items = client.folder(folder_id).get_items()
-    for item in items:
-        if item.type != "folder":
-            continue
-        if item.name == check_name:
-            return item.id
+    for attempt in range(BOX_API_ATTEMPTS):
+        try:
+            items = client.folder(folder_id).get_items()
+            for item in items:
+                if item.type != "folder":
+                    continue
+                if item.name == check_name:
+                    return item.id
+            return None
+        except Exception:
+            if attempt == BOX_API_ATTEMPTS - 1:
+                raise
+            time.sleep(BOX_API_RETRY_DELAY)
 
     return None
 
@@ -88,11 +98,17 @@ def get_file_url(file_id):
 
 @error_handler
 def get_folder_url(folder_id):
-    app_endpoint = client.folder(folder_id).get_shared_link()
-    m = re.match(r'(.*\.com)\/.*', app_endpoint)
-    web_endpoint = m.group(1) + "/folder/" + folder_id
-
-    return web_endpoint
+    for attempt in range(BOX_API_ATTEMPTS):
+        try:
+            app_endpoint = client.folder(folder_id).get_shared_link()
+            match = re.match(r'(.*\.com)\/.*', app_endpoint)
+            if match is None:
+                raise ValueError(f"invalid folder shared link: {app_endpoint}")
+            return match.group(1) + "/folder/" + folder_id
+        except Exception:
+            if attempt == BOX_API_ATTEMPTS - 1:
+                raise
+            time.sleep(BOX_API_RETRY_DELAY)
 
 @error_handler
 def get_folder_id(elements, dev=False):
@@ -101,12 +117,23 @@ def get_folder_id(elements, dev=False):
     else:
         folder_id = os.environ.get('BOX_FOLDER_ID')
     for num in elements:
-        if  subfolder_id := check_folder(folder_id, num):
-            folder_id = subfolder_id
-            continue
-        else:
-            subfolder = client.folder(folder_id).create_subfolder(num)
-            folder_id = subfolder.id
+        for attempt in range(BOX_API_ATTEMPTS):
+            # Check again on every attempt. The previous create request may
+            # have succeeded even if its response was lost.
+            if subfolder_id := check_folder(folder_id, num):
+                folder_id = subfolder_id
+                break
+            try:
+                subfolder = client.folder(folder_id).create_subfolder(num)
+                folder_id = subfolder.id
+                break
+            except Exception as error:
+                if getattr(error, 'status', None) == 409:
+                    folder_id = error.context_info["conflicts"]["id"]
+                    break
+                if attempt == BOX_API_ATTEMPTS - 1:
+                    raise
+                time.sleep(BOX_API_RETRY_DELAY)
     
     return folder_id
 

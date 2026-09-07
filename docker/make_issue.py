@@ -18,6 +18,38 @@ REPO_OWNER = os.environ.get('REPO_OWNER')
 REPO_NAME = os.environ.get('REPO_NAME')
 
 CABOT_NAME = os.environ.get('CABOT_NAME')
+REPORT_KEY_PREFIX = "cabot-report-key:"
+
+
+def report_key_marker(report_key):
+    return f"<!-- {REPORT_KEY_PREFIX} {report_key} -->"
+
+
+def find_issue_by_report_key(report_key):
+    url = 'https://api.github.com/search/issues'
+    session = requests.session()
+    session.auth = (GIT_USERNAME, GIT_PASSWORD)
+    marker = report_key_marker(report_key)
+    query = f'repo:{REPO_OWNER}/{REPO_NAME} is:issue in:body "{REPORT_KEY_PREFIX} {report_key}"'
+
+    try:
+        response = session.get(url, params={"q": query, "per_page": 10})
+    except requests.exceptions.RequestException as error:
+        sys.stderr.write(f"Exception: {error}\n")
+        sys.exit(1)
+
+    if response.status_code != 200:
+        sys.stderr.write(f"Error: {response.status_code} {response.text}\n")
+        sys.exit(1)
+
+    for issue in response.json().get("items", []):
+        if marker in (issue.get("body") or ""):
+            print(issue["number"])
+            sys.exit(0)
+
+    # A distinct status lets the caller distinguish "not found" from an API
+    # failure. Not found retains the existing new-issue behavior.
+    sys.exit(2)
 
 def make_github_issue(title, body=None, labels=None):
     '''Create an issue on github.com using the given parameters.'''
@@ -103,6 +135,8 @@ parser.add_argument('-l', '--log_name', action='store', nargs='*', default=[])
 parser.add_argument('-i', '--issue_number', action='store')
 parser.add_argument('-c', '--close_check', action='store_true')
 parser.add_argument('-L', '--labels', action='store', nargs='*', default=[])
+parser.add_argument('-k', '--report_key', action='store')
+parser.add_argument('-s', '--search_report_key', action='store')
 
 args = parser.parse_args()
 
@@ -111,6 +145,9 @@ body = ""
 links = list(zip(args.log_name, args.url))
 num = args.issue_number
 issue_labels = args.labels
+
+if args.search_report_key:
+    find_issue_by_report_key(args.search_report_key)
 
 if args.close_check:
     check_close(num)
@@ -146,7 +183,10 @@ with open(args.file_path, "r") as f:
             body += "\n" + name
         else:
             body += "\n" + "[{}]({})".format(name, url)
-        
+
+if args.report_key:
+    body += "\n\n" + report_key_marker(args.report_key)
+
 if num:
     update_issue_body(num, body, issue_labels)
 else:
