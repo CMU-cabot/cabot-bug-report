@@ -13,10 +13,13 @@ fi
 
 logs=($(ls -d cabot*/ | tail -$num | sed "s'/''" ))
 
-nanoseconds=0
+nanoseconds=
 if [ -f ./$log/ros2_topics/metadata.yaml ]; then
-    nanoseconds=$(cat ./$log/ros2_topics/metadata.yaml | grep -m 1 nanoseconds: | awk '{print $2}')
-else
+    nanoseconds=$(grep -m 1 nanoseconds: ./$log/ros2_topics/metadata.yaml | awk '{print $2}')
+fi
+
+if [[ ! $nanoseconds =~ ^[0-9]+$ ]]; then
+    nanoseconds=0
     read date time < <(echo $log | sed -E 's/cabot_([0-9]{4}-[0-9]{2}-[0-9]{2})-([0-9]{2}-[0-9]{2}-[0-9]{2})/\1 \2/')
     timestamp=$(date -d "$date ${time//-/:}" "+%s")
     if [ -n "$time" ]; then
